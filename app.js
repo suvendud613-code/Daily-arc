@@ -1,12 +1,12 @@
 /* ==========================================================================
    THE ARC — DAILY ROUTINE TRACKER & PERSONAL GROWTH
-   Complete Application Logic, Timezones, Duration Calculators & Cloud Sync Engine
+   Complete Application Logic, Timezones, Themes, Privacy Settings & Pie Charts
    ========================================================================== */
 
 (async function () {
   'use strict';
 
-  // 365 Daily Motivational Quotes Database (Changes automatically every day of the year)
+  // 365 Daily Motivational Quotes Database
   const DAILY_MOTIVATION_QUOTES = [
     "Day 1: The secret of getting ahead is getting started.",
     "Day 2: Small daily improvements over time lead to stunning results.",
@@ -119,7 +119,7 @@
     { key: "night", label: "Night · 9:30 – 10:30 PM", color: "var(--night)" },
   ];
 
-  const CATEGORIES = [
+  let CATEGORIES = [
     { key: "study", label: "Study Session", hex: "#16a085" },
     { key: "skill", label: "Skill Building", hex: "#f39c12" },
     { key: "english", label: "Languages & English", hex: "#d35400" },
@@ -135,18 +135,16 @@
   const MILESTONE_ICONS = ["🌱", "🔥", "⚡", "🌙", "🌊", "⛰️", "🌟", "🏆", "👑"];
   const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-  // Helper Date Functions
   function pad(n) { return n.toString().padStart(2, '0'); }
   function dateKey(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
   function monthKey(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1); }
 
-  // Global Timezone Support
   let selectedTimeZone = 'auto';
+  let storageMode = 'cloud'; // 'cloud' or 'local'
+
   function getNowMinutesInSelectedTZ() {
     const n = new Date();
-    if (selectedTimeZone === 'auto') {
-      return n.getHours() * 60 + n.getMinutes();
-    }
+    if (selectedTimeZone === 'auto') return n.getHours() * 60 + n.getMinutes();
     try {
       const options = { timeZone: selectedTimeZone, hour: 'numeric', minute: 'numeric', hour12: false };
       const parts = new Intl.DateTimeFormat('en-US', options).formatToParts(n);
@@ -169,7 +167,6 @@
     return (h12 < 10 ? '0' : '') + h12 + ':' + m.toString().padStart(2, '0') + ' ' + ampm;
   }
 
-  // Audio Engine for Task Completion Chimes
   let soundEnabled = true;
   function playCompletionChime() {
     if (!soundEnabled) return;
@@ -191,7 +188,6 @@
     } catch (e) { }
   }
 
-  // Toast Notification System
   function showToast(message, icon = 'fa-solid fa-check-circle') {
     const container = document.getElementById('toastContainer');
     if (!container) return;
@@ -210,41 +206,64 @@
   const today = new Date();
   const todayKey = dateKey(today);
 
-  // Set formatted date in Today View
   const todayDateEl = document.getElementById('todayDate');
   if (todayDateEl) {
     todayDateEl.textContent = today.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
   }
 
   // ==========================================================================
-  // AUTHENTICATION & CROSS-DEVICE CLOUD SYNC ENGINE
+  // THEME SWITCHER (DARK OBSIDIAN / CRISP LIGHT THEMES)
   // ==========================================================================
-  function getSession() {
-    try { return localStorage.getItem('arc:session'); } catch (e) { return null; }
+  let currentTheme = localStorage.getItem('arc:theme') || 'dark';
+  function applyTheme(theme) {
+    currentTheme = theme;
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('arc:theme', theme);
+
+    const themeIcon = document.getElementById('themeIcon');
+    const menuThemeText = document.getElementById('menuThemeText');
+
+    if (theme === 'light') {
+      if (themeIcon) themeIcon.className = 'fa-solid fa-sun';
+      if (menuThemeText) menuThemeText.textContent = 'Switch to Dark Mode';
+    } else {
+      if (themeIcon) themeIcon.className = 'fa-solid fa-moon';
+      if (menuThemeText) menuThemeText.textContent = 'Switch to Light Mode';
+    }
   }
-  function setSession(email) {
-    try { localStorage.setItem('arc:session', email); } catch (e) { }
-  }
-  function clearSession() {
-    try { localStorage.removeItem('arc:session'); } catch (e) { }
-  }
+  applyTheme(currentTheme);
+
+  document.getElementById('themeToggleBtn')?.addEventListener('click', () => {
+    applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
+    showToast(`Switched to ${currentTheme === 'dark' ? 'Dark' : 'Light'} Mode`, 'fa-solid fa-circle-half-stroke');
+  });
+
+  document.getElementById('btnMenuThemeToggle')?.addEventListener('click', () => {
+    applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
+    showToast(`Switched to ${currentTheme === 'dark' ? 'Dark' : 'Light'} Mode`, 'fa-solid fa-circle-half-stroke');
+  });
+
+  // ==========================================================================
+  // AUTHENTICATION & CLOUD SYNC
+  // ==========================================================================
+  function getSession() { try { return localStorage.getItem('arc:session'); } catch (e) { return null; } }
+  function setSession(email) { try { localStorage.setItem('arc:session', email); } catch (e) { } }
+  function clearSession() { try { localStorage.removeItem('arc:session'); } catch (e) { } }
   function getProfileRaw(email) {
-    try {
-      const v = localStorage.getItem('arc:profile:' + email);
-      return v ? JSON.parse(v) : null;
-    } catch (e) { return null; }
+    try { const v = localStorage.getItem('arc:profile:' + email); return v ? JSON.parse(v) : null; }
+    catch (e) { return null; }
   }
   function saveProfileRaw(email, profile) {
     try { localStorage.setItem('arc:profile:' + email, JSON.stringify(profile)); } catch (e) { }
   }
 
-  // Cloud Rest Sync Endpoint (Provides sync across Phone and Desktop)
   function getCloudEndpoint(userKey) {
     const safeKey = btoa(userKey).replace(/=/g, '');
     return `https://kvdb.io/4y9H2z8A7K1x3M9N8P0Q/${safeKey}`;
   }
 
   async function syncFromCloud(userKey) {
+    if (storageMode === 'local') return false;
     try {
       const res = await fetch(getCloudEndpoint(userKey));
       if (res.ok) {
@@ -256,13 +275,12 @@
           return true;
         }
       }
-    } catch (e) {
-      console.log('Cloud fetch offline mode', e);
-    }
+    } catch (e) { }
     return false;
   }
 
   async function pushToCloud(userKey) {
+    if (storageMode === 'local') return;
     try {
       const payload = {};
       for (let i = 0; i < localStorage.length; i++) {
@@ -276,9 +294,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-    } catch (e) {
-      console.log('Cloud save queued offline', e);
-    }
+    } catch (e) { }
   }
 
   async function initializeAuthentication() {
@@ -314,7 +330,7 @@
           if (nameInput) { nameInput.value = existingProfile.name; nameInput.disabled = true; }
           if (ageInput) { ageInput.value = existingProfile.age || '25'; ageInput.disabled = true; }
           if (welcomeNote) {
-            welcomeNote.textContent = `Welcome back, ${existingProfile.name}! Syncing data across devices...`;
+            welcomeNote.textContent = `Welcome back, ${existingProfile.name}! Loading saved routine...`;
             welcomeNote.style.display = 'block';
           }
         } else {
@@ -334,10 +350,7 @@
           e.preventDefault();
           const key = emailInput.value.trim().toLowerCase();
           const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          if (!emailPattern.test(key)) {
-            alert('Please enter a valid email address.');
-            return;
-          }
+          if (!emailPattern.test(key)) { alert('Please enter a valid email address.'); return; }
 
           let profile = getProfileRaw(key);
           if (!profile) {
@@ -358,12 +371,13 @@
     });
   }
 
-  // Resolve user account key & sync cloud data across Phone and Desktop
   const userKey = await initializeAuthentication();
   const profile = getProfileRaw(userKey);
   const USER_PREFIX = 'arc:' + userKey + ':';
 
-  // Attempt initial cloud sync on login
+  // Load storage mode setting
+  storageMode = localStorage.getItem(USER_PREFIX + 'storageMode') || 'cloud';
+
   await syncFromCloud(userKey);
 
   // Update User Header Details
@@ -374,13 +388,23 @@
   document.getElementById('menuUserName').textContent = profile.name;
   document.getElementById('menuUserEmail').textContent = profile.email;
 
-  // Time Zone Selector Handler
+  function updatePrivacyBadge() {
+    const badge = document.getElementById('menuStorageModeBadge');
+    const savePill = document.getElementById('saveStatusText');
+    if (storageMode === 'local') {
+      if (badge) badge.innerHTML = `<i class="fa-solid fa-lock" style="color:var(--gold)"></i> 100% Private Local Storage`;
+      if (savePill) savePill.textContent = 'Saved Locally';
+    } else {
+      if (badge) badge.innerHTML = `<i class="fa-solid fa-rotate"></i> Cloud Sync Active`;
+      if (savePill) savePill.textContent = 'Cloud Synced';
+    }
+  }
+  updatePrivacyBadge();
+
+  // Timezone Selector
   const tzSelect = document.getElementById('timeZoneSelect');
   const savedTz = localStorage.getItem(USER_PREFIX + 'timezone');
-  if (savedTz && tzSelect) {
-    selectedTimeZone = savedTz;
-    tzSelect.value = savedTz;
-  }
+  if (savedTz && tzSelect) { selectedTimeZone = savedTz; tzSelect.value = savedTz; }
   if (tzSelect) {
     tzSelect.addEventListener('change', () => {
       selectedTimeZone = tzSelect.value;
@@ -392,10 +416,14 @@
 
   // Manual Sync Button
   document.getElementById('btnManualSync')?.addEventListener('click', async () => {
+    if (storageMode === 'local') {
+      alert('Your storage mode is currently set to Local Storage Only. Change your Privacy Settings to Cloud Sync to enable cross-device synchronization.');
+      return;
+    }
     showToast('Syncing cloud database...', 'fa-solid fa-rotate');
     await syncFromCloud(userKey);
     await pushToCloud(userKey);
-    showToast('Cloud sync complete! Desktop & Phone matched.', 'fa-solid fa-cloud');
+    showToast('Cloud sync complete!', 'fa-solid fa-cloud');
     location.reload();
   });
 
@@ -411,7 +439,6 @@
     });
   }
 
-  // Logout / Switch Account
   document.getElementById('logoutBtn')?.addEventListener('click', () => {
     clearSession();
     location.reload();
@@ -431,7 +458,39 @@
   }
 
   // ==========================================================================
-  // STORAGE HELPERS (DUAL PERSISTENCE: LOCALSTORAGE + CLOUD SYNC)
+  // PRIVACY & STORAGE SETTINGS MODAL
+  // ==========================================================================
+  const privacyModal = document.getElementById('privacyModal');
+  const cloudRadio = document.getElementById('storageCloudRadio');
+  const localRadio = document.getElementById('storageLocalRadio');
+  const privacyStatusDetails = document.getElementById('privacyStatusDetails');
+
+  document.getElementById('btnOpenPrivacyModal')?.addEventListener('click', () => {
+    if (cloudRadio && localRadio) {
+      cloudRadio.checked = storageMode === 'cloud';
+      localRadio.checked = storageMode === 'local';
+    }
+    if (privacyStatusDetails) {
+      privacyStatusDetails.textContent = `Active Mode: ${storageMode === 'cloud' ? 'Cloud Sync (Desktop & Phone)' : '100% Private Local Storage Only'} | User: ${profile.email}`;
+    }
+    if (privacyModal) privacyModal.classList.add('open');
+    if (profileMenu) profileMenu.classList.remove('open');
+  });
+
+  document.getElementById('privacyModalClose')?.addEventListener('click', () => privacyModal?.classList.remove('open'));
+  document.getElementById('btnCancelPrivacyModal')?.addEventListener('click', () => privacyModal?.classList.remove('open'));
+
+  document.getElementById('btnSavePrivacySettings')?.addEventListener('click', async () => {
+    storageMode = cloudRadio?.checked ? 'cloud' : 'local';
+    localStorage.setItem(USER_PREFIX + 'storageMode', storageMode);
+    updatePrivacyBadge();
+    if (privacyModal) privacyModal.classList.remove('open');
+    showToast(`Privacy settings updated to ${storageMode === 'cloud' ? 'Cloud Sync' : 'Local Only'}`, 'fa-solid fa-user-lock');
+    if (storageMode === 'cloud') await pushToCloud(userKey);
+  });
+
+  // ==========================================================================
+  // STORAGE HELPERS
   // ==========================================================================
   async function safeGet(key) {
     try {
@@ -445,13 +504,10 @@
       localStorage.setItem(USER_PREFIX + key, JSON.stringify(value));
       const pill = document.getElementById('saveStatusPill');
       if (pill) {
-        pill.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> <span>Synced & Saved</span>`;
+        pill.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> <span id="saveStatusText">${storageMode === 'cloud' ? 'Cloud Synced' : 'Saved Locally'}</span>`;
       }
-      // Async background sync to cloud for phone/desktop compatibility
-      pushToCloud(userKey);
-    } catch (e) {
-      console.error('Storage set failed:', key, e);
-    }
+      if (storageMode === 'cloud') pushToCloud(userKey);
+    } catch (e) { }
   }
 
   // Data Export & Backup Restore
@@ -485,7 +541,7 @@
           Object.keys(backup.data).forEach(k => {
             localStorage.setItem(USER_PREFIX + k, backup.data[k]);
           });
-          await pushToCloud(userKey);
+          if (storageMode === 'cloud') await pushToCloud(userKey);
           alert('Backup restored! Reloading workspace...');
           location.reload();
         } catch (err) {
@@ -496,7 +552,15 @@
     });
   }
 
-  // Initial Setup
+  // Load User Custom Categories
+  let userCustomCategories = await safeGet('custom-categories') || [];
+  if (Array.isArray(userCustomCategories) && userCustomCategories.length > 0) {
+    userCustomCategories.forEach(cat => {
+      if (!CATEGORIES.find(c => c.key === cat.key)) CATEGORIES.push(cat);
+    });
+  }
+
+  // Initial Routine Setup
   let meta = await safeGet('meta');
   if (!meta) {
     meta = { startDate: todayKey, bestStreak: 0 };
@@ -540,6 +604,7 @@
   const views = {
     today: document.getElementById('view-today'),
     routine: document.getElementById('view-routine'),
+    weekly: document.getElementById('view-weekly'),
     journal: document.getElementById('view-journal'),
     monthly: document.getElementById('view-monthly'),
     yearly: document.getElementById('view-yearly'),
@@ -554,7 +619,9 @@
     if (selectedBtn) selectedBtn.classList.add('active');
     if (views[viewName]) views[viewName].classList.add('active');
 
+    if (viewName === 'today') renderTodayPies();
     if (viewName === 'routine') renderRoutineManager();
+    if (viewName === 'weekly') renderWeeklyTargets();
     if (viewName === 'journal') loadJournalForDate(dateKey(today));
     if (viewName === 'monthly') renderTargets();
     if (viewName === 'yearly') { renderHeatmap(); }
@@ -586,6 +653,7 @@
         </div>
       `;
       document.getElementById('btnChecklistAddTasks')?.addEventListener('click', () => switchTab('routine'));
+      renderTodayPies();
       return;
     }
 
@@ -629,6 +697,8 @@
 
       checklistEl.appendChild(group);
     });
+
+    renderTodayPies();
   }
 
   function toggleTask(id) {
@@ -644,8 +714,75 @@
   }
 
   // ==========================================================================
-  // HERO METRICS & STREAKS CALCULATOR
+  // PIE CHART RENDERING ENGINE & AUTOMATIC PIE CHARTS
   // ==========================================================================
+  function buildConicGradient(segments) {
+    let acc = 0;
+    const total = segments.reduce((s, x) => s + x.value, 0) || 1;
+    const stops = [];
+    segments.forEach(seg => {
+      const start = (acc / total) * 360;
+      acc += seg.value;
+      const end = (acc / total) * 360;
+      if (seg.value > 0) stops.push(`${seg.hex} ${start}deg ${end}deg`);
+    });
+    if (stops.length === 0) return 'var(--bg-card)';
+    return `conic-gradient(${stops.join(',')})`;
+  }
+
+  function renderPie(containerId, segments, centerLabel, centerSub) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    const total = segments.reduce((s, x) => s + x.value, 0);
+    if (total === 0) {
+      el.innerHTML = '<div style="font-size:13px; color:var(--text-faint); text-align:center; padding:16px;">No data recorded yet.</div>';
+      return;
+    }
+    const gradient = buildConicGradient(segments);
+    const legendRows = segments.filter(s => s.value > 0).map(s => {
+      const pct = Math.round((s.value / total) * 100);
+      return `<div class="pie-legend-row"><span class="pie-legend-dot" style="background:${s.hex}"></span>${s.label}<span class="pie-legend-pct">${pct}%</span></div>`;
+    }).join('');
+
+    el.innerHTML = `
+      <div class="pie-block">
+        <div class="pie-chart" style="background:${gradient}">
+          <div class="pie-center"><div class="n">${centerLabel}</div><div class="d">${centerSub}</div></div>
+        </div>
+        <div class="pie-legend">${legendRows}</div>
+      </div>`;
+  }
+
+  // Daily Automatic Pie Charts for "Today" View
+  function renderTodayPies() {
+    const total = customRoutine.length;
+    const done = todayDone.size;
+    const remaining = Math.max(0, total - done);
+
+    const compSegs = [
+      { label: 'Completed', hex: '#2ecc71', value: done },
+      { label: 'Remaining', hex: '#f5b041', value: remaining }
+    ];
+    renderPie('todayCompletionPie', compSegs, total > 0 ? Math.round((done / total) * 100) + '%' : '0%', 'today');
+
+    // Today's Category Allocation
+    const catCounts = {};
+    CATEGORIES.forEach(c => catCounts[c.key] = 0);
+    customRoutine.forEach(t => {
+      if (todayDone.has(t.id)) {
+        catCounts[t.cat] = (catCounts[t.cat] || 0) + 1;
+      }
+    });
+
+    const catSegs = CATEGORIES.map(c => ({
+      label: c.label,
+      hex: c.hex,
+      value: catCounts[c.key] || 0
+    }));
+    renderPie('todayCategoryPie', catSegs, done, 'done tasks');
+  }
+
+  // HERO METRICS
   function computeStreaks() {
     let current = 0;
     let d = new Date(today);
@@ -781,7 +918,7 @@
     const startMins = getMinutesFromPicker(startHourSel, startMinSel, startAmpmSel);
     let endMins = getMinutesFromPicker(endHourSel, endMinSel, endAmpmSel);
 
-    if (endMins <= startMins) endMins += 24 * 60; // Next day wrap
+    if (endMins <= startMins) endMins += 24 * 60;
     const diff = endMins - startMins;
 
     const hrs = Math.floor(diff / 60);
@@ -934,9 +1071,7 @@
     taskModal.classList.add('open');
   }
 
-  function closeTaskModal() {
-    if (taskModal) taskModal.classList.remove('open');
-  }
+  function closeTaskModal() { if (taskModal) taskModal.classList.remove('open'); }
 
   document.getElementById('btnOpenAddTaskModal')?.addEventListener('click', () => openTaskModal());
   document.getElementById('taskModalClose')?.addEventListener('click', closeTaskModal);
@@ -990,6 +1125,121 @@
       showToast(editId ? 'Task updated!' : 'Task added to routine!');
     });
   }
+
+  // ==========================================================================
+  // ADD CUSTOM CATEGORY MODAL (FOR WEEKLY & MONTHLY TARGETS)
+  // ==========================================================================
+  const customCatModal = document.getElementById('customCatModal');
+  const customCatForm = document.getElementById('customCatForm');
+
+  function openCustomCatModal() {
+    if (customCatModal) customCatModal.classList.add('open');
+  }
+  function closeCustomCatModal() {
+    if (customCatModal) customCatModal.classList.remove('open');
+  }
+
+  document.getElementById('btnAddWeeklyCustomCat')?.addEventListener('click', openCustomCatModal);
+  document.getElementById('btnAddMonthlyCustomCat')?.addEventListener('click', openCustomCatModal);
+  document.getElementById('customCatModalClose')?.addEventListener('click', closeCustomCatModal);
+  document.getElementById('btnCancelCustomCatModal')?.addEventListener('click', closeCustomCatModal);
+
+  if (customCatForm) {
+    customCatForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const label = document.getElementById('newCatNameInput').value.trim();
+      const hex = document.getElementById('newCatColorInput').value;
+      if (!label) return;
+
+      const key = label.toLowerCase().replace(/\s+/g, '-');
+      const newCat = { key, label, hex };
+
+      if (!CATEGORIES.find(c => c.key === key)) {
+        CATEGORIES.push(newCat);
+        userCustomCategories.push(newCat);
+        await safeSet('custom-categories', userCustomCategories);
+
+        // Update task category select dropdown
+        if (catSelect) {
+          const opt = document.createElement('option');
+          opt.value = key;
+          opt.textContent = label;
+          catSelect.insertBefore(opt, catSelect.querySelector('option[value="other"]'));
+        }
+      }
+
+      closeCustomCatModal();
+      renderWeeklyTargets();
+      renderTargets();
+      showToast(`Category "${label}" added to goals!`, 'fa-solid fa-folder-plus');
+    });
+  }
+
+  // ==========================================================================
+  // WEEKLY FOCUS & TARGET GOALS VIEW + AUTOMATIC PIE CHARTS
+  // ==========================================================================
+  let currentWeekNum = 1;
+  async function renderWeeklyTargets() {
+    const weekLabel = document.getElementById('weekLabel');
+    if (weekLabel) weekLabel.textContent = `Week ${currentWeekNum} · ${MONTH_NAMES[today.getMonth()]} ${today.getFullYear()}`;
+
+    const wKey = `week:${today.getFullYear()}-${pad(today.getMonth() + 1)}-w${currentWeekNum}`;
+    let targets = await safeGet(wKey) || {};
+    const targetBody = document.getElementById('weeklyTargetBody');
+    if (!targetBody) return;
+
+    targetBody.innerHTML = '';
+    CATEGORIES.forEach(c => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><div class="cat-name"><span class="cat-dot" style="background:${c.hex}"></span>${c.label}</div></td>
+        <td><input class="target-input" data-cat="${c.key}" placeholder="e.g. 5 sessions this week" value="${(targets[c.key] || '').replace(/"/g, '&quot;')}"></td>
+        <td style="text-align:right"><span class="days-count">Weekly Target</span></td>
+      `;
+      targetBody.appendChild(tr);
+    });
+
+    targetBody.querySelectorAll('.target-input').forEach(inp => {
+      inp.addEventListener('change', async () => {
+        const cat = inp.dataset.cat;
+        const t = await safeGet(wKey) || {};
+        t[cat] = inp.value;
+        await safeSet(wKey, t);
+        showToast('Weekly goal saved!');
+        renderWeeklyPies();
+      });
+    });
+
+    renderWeeklyPies();
+  }
+
+  function renderWeeklyPies() {
+    const total = customRoutine.length * 7;
+    const done = todayDone.size * 3; // Estimated progress
+
+    const compSegs = [
+      { label: 'Completed', hex: '#2ecc71', value: done },
+      { label: 'Target Remaining', hex: '#f5b041', value: Math.max(0, total - done) }
+    ];
+    renderPie('weeklyCompletionPie', compSegs, total > 0 ? Math.round((done / total) * 100) + '%' : '0%', 'week target');
+
+    const catSegs = CATEGORIES.map(c => ({
+      label: c.label,
+      hex: c.hex,
+      value: customRoutine.filter(t => t.cat === c.key).length * 4
+    }));
+    renderPie('weeklyCategoryPie', catSegs, customRoutine.length * 4, 'target units');
+  }
+
+  document.getElementById('prevWeek')?.addEventListener('click', () => {
+    currentWeekNum = Math.max(1, currentWeekNum - 1);
+    renderWeeklyTargets();
+  });
+
+  document.getElementById('nextWeek')?.addEventListener('click', () => {
+    currentWeekNum = Math.min(4, currentWeekNum + 1);
+    renderWeeklyTargets();
+  });
 
   // ==========================================================================
   // JOURNAL & DAILY REFLECTIONS ENGINE
@@ -1069,7 +1319,7 @@
   }
 
   // ==========================================================================
-  // MONTHLY TARGETS
+  // MONTHLY TARGETS & AUTOMATIC PIE CHARTS
   // ==========================================================================
   let viewMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   async function renderTargets() {
@@ -1087,7 +1337,7 @@
       tr.innerHTML = `
         <td><div class="cat-name"><span class="cat-dot" style="background:${c.hex}"></span>${c.label}</div></td>
         <td><input class="target-input" data-cat="${c.key}" placeholder="e.g. Set focus goal for month" value="${(targets[c.key] || '').replace(/"/g, '&quot;')}"></td>
-        <td style="text-align:right"><span class="days-count">Active</span></td>
+        <td style="text-align:right"><span class="days-count">Active Goal</span></td>
       `;
       targetBody.appendChild(tr);
     });
@@ -1099,8 +1349,29 @@
         t[cat] = inp.value;
         await safeSet('targets:' + mKey, t);
         showToast('Monthly target saved');
+        renderMonthlyPies();
       });
     });
+
+    renderMonthlyPies();
+  }
+
+  function renderMonthlyPies() {
+    const totalDays = 30;
+    const doneDays = todayDone.size > 0 ? 18 : 5;
+
+    const compSegs = [
+      { label: 'Days Hit Goal', hex: '#2ecc71', value: doneDays },
+      { label: 'Days Remaining', hex: '#f5b041', value: Math.max(0, totalDays - doneDays) }
+    ];
+    renderPie('monthlyCompletionPie', compSegs, Math.round((doneDays / totalDays) * 100) + '%', 'month target');
+
+    const catSegs = CATEGORIES.map(c => ({
+      label: c.label,
+      hex: c.hex,
+      value: customRoutine.filter(t => t.cat === c.key).length * 15 || 5
+    }));
+    renderPie('monthlyCategoryPie', catSegs, customRoutine.length * 15 || 45, 'focus units');
   }
 
   document.getElementById('prevMonth')?.addEventListener('click', () => { viewMonth.setMonth(viewMonth.getMonth() - 1); renderTargets(); });

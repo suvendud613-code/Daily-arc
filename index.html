@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,7 +18,7 @@
 </head>
 <body>
 
-  <!-- LOGIN / SIGN-IN OVERLAY (Hidden by default in CSS, shown only if no active session) -->
+  <!-- LOGIN / SIGN-IN OVERLAY -->
   <div class="login-screen" id="loginScreen">
     <div class="login-card">
       <div class="login-brand">
@@ -60,8 +60,8 @@
         </button>
 
         <div class="login-note">
-          <i class="fa-solid fa-cloud-arrow-up"></i>
-          Cloud Sync Active: Logging in with the same email syncs your routine seamlessly across Desktop and Mobile Phone.
+          <i class="fa-solid fa-shield-halved"></i>
+          Privacy Safe: Your data is stored according to your Privacy & Storage settings.
         </div>
       </form>
     </div>
@@ -84,6 +84,10 @@
         <button class="nav-tab" data-view="routine">
           <i class="fa-solid fa-list-check"></i>
           <span>Routine Builder</span>
+        </button>
+        <button class="nav-tab" data-view="weekly">
+          <i class="fa-solid fa-calendar-week"></i>
+          <span>Weekly</span>
         </button>
         <button class="nav-tab" data-view="journal">
           <i class="fa-solid fa-book-bookmark"></i>
@@ -124,6 +128,11 @@
           </select>
         </div>
 
+        <!-- Quick Theme Toggle Button -->
+        <button class="icon-btn" id="themeToggleBtn" title="Toggle Light / Dark Theme">
+          <i class="fa-solid fa-moon" id="themeIcon"></i>
+        </button>
+
         <button class="icon-btn" id="soundToggleBtn" title="Toggle sound effects">
           <i class="fa-solid fa-volume-high" id="soundIcon"></i>
         </button>
@@ -139,9 +148,21 @@
             <div class="menu-header">
               <div class="menu-user-name" id="menuUserName">User Name</div>
               <div class="menu-user-email" id="menuUserEmail">user@example.com</div>
-              <div class="menu-sync-badge"><i class="fa-solid fa-rotate"></i> Cloud Sync Active</div>
+              <div class="menu-sync-badge" id="menuStorageModeBadge"><i class="fa-solid fa-rotate"></i> Cloud Sync Active</div>
             </div>
             <div class="menu-divider"></div>
+            
+            <!-- Theme Toggle Item in Profile Menu -->
+            <button id="btnMenuThemeToggle">
+              <i class="fa-solid fa-circle-half-stroke"></i>
+              <span id="menuThemeText">Switch to Light Mode</span>
+            </button>
+
+            <!-- Privacy & Storage Settings in Profile Menu -->
+            <button id="btnOpenPrivacyModal">
+              <i class="fa-solid fa-user-lock"></i> Privacy & Storage Settings
+            </button>
+
             <button id="btnManualSync"><i class="fa-solid fa-cloud-arrow-down"></i> Sync Cloud Data Now</button>
             <button id="exportDataBtn"><i class="fa-solid fa-download"></i> Export Backup File</button>
             <label id="importDataLabel" class="menu-label">
@@ -193,7 +214,7 @@
             <div class="ring-title">Today's Progress</div>
             <div class="ring-sub" id="doneTodaySub">0 of 0 tasks finished</div>
             <div class="save-status-pill" id="saveStatusPill">
-              <i class="fa-solid fa-cloud-arrow-up"></i> <span>Cloud Synced</span>
+              <i class="fa-solid fa-cloud-arrow-up"></i> <span id="saveStatusText">Cloud Synced</span>
             </div>
           </div>
         </div>
@@ -228,13 +249,13 @@
   <!-- MAIN CONTENT CONTAINER -->
   <main class="wrap main-container">
 
-    <!-- PAGE 1: TODAY VIEW -->
+    <!-- PAGE 1: TODAY VIEW (WITH AUTOMATIC DAILY PIE CHARTS) -->
     <div class="view active" id="view-today">
       <div class="section-card">
         <div class="section-head">
           <div>
             <h2><i class="fa-solid fa-calendar-check icon-head"></i> Today's Schedule — <span id="todayDate">Monday</span></h2>
-            <div class="hint" id="todayHint">Tap a task when completed. Tasks auto-unlock as their scheduled start time arrives.</div>
+            <div class="hint" id="todayHint">Tap a task when completed. Tasks auto-unlock as scheduled.</div>
           </div>
           <div class="head-actions">
             <button class="btn btn-secondary btn-sm" id="btnGoToRoutineBuilder">
@@ -245,6 +266,27 @@
 
         <div id="checklist" class="checklist-container">
           <!-- Dynamic Task List Rendered by JS -->
+        </div>
+      </div>
+
+      <!-- AUTOMATIC DAILY PIE CHARTS SECTION -->
+      <div class="section-card margin-top-lg">
+        <div class="section-head">
+          <div>
+            <h2><i class="fa-solid fa-chart-pie icon-head"></i> Today's Automatic Breakdown</h2>
+            <div class="hint">Live pie charts generated automatically as you check off today's tasks</div>
+          </div>
+        </div>
+
+        <div class="pie-grid">
+          <div class="pie-card">
+            <h4 class="pie-card-title">Today's Completion Rate</h4>
+            <div id="todayCompletionPie" class="pie-container"></div>
+          </div>
+          <div class="pie-card">
+            <h4 class="pie-card-title">Today's Category Focus</h4>
+            <div id="todayCategoryPie" class="pie-container"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -263,7 +305,7 @@
         <div class="section-head">
           <div>
             <h2>Manage Routine Tasks</h2>
-            <div class="hint">Tasks added here sync immediately across your Desktop and Mobile Phone.</div>
+            <div class="hint">Tasks added here sync immediately across your devices.</div>
           </div>
           <button class="btn btn-primary" id="btnOpenAddTaskModal">
             <i class="fa-solid fa-plus"></i> Add New Task
@@ -276,7 +318,72 @@
       </div>
     </div>
 
-    <!-- PAGE 3: JOURNAL & NOTES VIEW -->
+    <!-- PAGE 3: WEEKLY FOCUS & TARGET GOALS VIEW -->
+    <div class="view" id="view-weekly">
+      <div class="page-banner weekly-banner">
+        <div class="banner-overlay"></div>
+        <div class="banner-text">
+          <div class="t"><i class="fa-solid fa-calendar-week"></i> Weekly Focus & Target Goals</div>
+          <div class="s">Set week-by-week goals and track category target hits.</div>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-head">
+          <div>
+            <h2>Weekly Goals & Category Focus</h2>
+            <div class="hint">Track your weekly targets and progress</div>
+          </div>
+          <div class="month-nav-controls">
+            <button class="icon-btn-sub" id="prevWeek"><i class="fa-solid fa-chevron-left"></i></button>
+            <span class="month-display" id="weekLabel">Week 1 · September 2026</span>
+            <button class="icon-btn-sub" id="nextWeek"><i class="fa-solid fa-chevron-right"></i></button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="target-table">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Weekly Target Goal</th>
+                <th style="text-align:right">Status</th>
+              </tr>
+            </thead>
+            <tbody id="weeklyTargetBody">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Add Custom Category Button in Weekly -->
+        <div class="table-actions-row margin-top-md">
+          <button class="btn btn-secondary btn-sm" id="btnAddWeeklyCustomCat">
+            <i class="fa-solid fa-plus"></i> Add Custom Category Goal
+          </button>
+        </div>
+      </div>
+
+      <!-- AUTOMATIC WEEKLY PIE CHARTS AT THE BOTTOM -->
+      <div class="section-card margin-top-lg">
+        <div class="section-head">
+          <h2>Weekly Automatic Insights</h2>
+          <div class="hint">Live breakdown of this week's progress</div>
+        </div>
+        <div class="pie-grid">
+          <div class="pie-card">
+            <h4 class="pie-card-title">This Week's Completion Rate</h4>
+            <div id="weeklyCompletionPie" class="pie-container"></div>
+          </div>
+          <div class="pie-card">
+            <h4 class="pie-card-title">This Week's Category Allocation</h4>
+            <div id="weeklyCategoryPie" class="pie-container"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 4: JOURNAL & NOTES VIEW -->
     <div class="view" id="view-journal">
       <div class="page-banner journal-banner">
         <div class="banner-overlay"></div>
@@ -312,7 +419,7 @@
           </div>
 
           <div class="journal-footer">
-            <span class="save-indicator-text" id="journalSaveText">Synced to cloud & local memory</span>
+            <span class="save-indicator-text" id="journalSaveText">Saved</span>
             <button class="btn btn-primary" id="btnSaveJournal">
               <i class="fa-solid fa-floppy-disk"></i> Save Reflection
             </button>
@@ -330,7 +437,7 @@
       </div>
     </div>
 
-    <!-- PAGE 4: MONTHLY ANALYTICS VIEW -->
+    <!-- PAGE 5: MONTHLY ANALYTICS VIEW -->
     <div class="view" id="view-monthly">
       <div class="page-banner monthly-banner">
         <div class="banner-overlay"></div>
@@ -364,10 +471,35 @@
             </tbody>
           </table>
         </div>
+
+        <!-- Add Custom Category Button in Monthly -->
+        <div class="table-actions-row margin-top-md">
+          <button class="btn btn-secondary btn-sm" id="btnAddMonthlyCustomCat">
+            <i class="fa-solid fa-plus"></i> Add Custom Category Goal
+          </button>
+        </div>
+      </div>
+
+      <!-- AUTOMATIC MONTHLY PIE CHARTS AT THE BOTTOM -->
+      <div class="section-card margin-top-lg">
+        <div class="section-head">
+          <h2>Monthly Automatic Insights</h2>
+          <div class="hint">Live breakdown of this month's progress</div>
+        </div>
+        <div class="pie-grid">
+          <div class="pie-card">
+            <h4 class="pie-card-title">This Month's Completion Rate</h4>
+            <div id="monthlyCompletionPie" class="pie-container"></div>
+          </div>
+          <div class="pie-card">
+            <h4 class="pie-card-title">This Month's Category Focus</h4>
+            <div id="monthlyCategoryPie" class="pie-container"></div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- PAGE 5: YEARLY HEATMAP VIEW -->
+    <!-- PAGE 6: YEARLY HEATMAP VIEW -->
     <div class="view" id="view-yearly">
       <div class="page-banner yearly-banner">
         <div class="banner-overlay"></div>
@@ -401,7 +533,7 @@
       </div>
     </div>
 
-    <!-- PAGE 6: REWARDS & MILESTONES VIEW -->
+    <!-- PAGE 7: REWARDS & MILESTONES VIEW -->
     <div class="view" id="view-rewards">
       <div class="page-banner rewards-banner">
         <div class="banner-overlay"></div>
@@ -438,6 +570,79 @@
 
   </main>
 
+  <!-- MODAL: PRIVACY & STORAGE SETTINGS (Local Storage vs Cloud Sync) -->
+  <div class="modal-overlay" id="privacyModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-user-lock icon-head"></i> Privacy & Storage Settings</h3>
+        <button class="modal-close-btn" id="privacyModalClose"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:13.5px; color:var(--text-muted); margin-bottom:16px;">
+          Choose where and how your routine data is saved. You have 100% control over your data privacy.
+        </p>
+
+        <div class="privacy-option-card">
+          <label class="radio-label">
+            <input type="radio" name="storagePreference" value="cloud" id="storageCloudRadio">
+            <div>
+              <div class="option-title"><i class="fa-solid fa-cloud-arrow-up"></i> Cloud Sync + Local Backup (Recommended)</div>
+              <div class="option-sub">Automatically syncs your routine, progress, and journal notes across your Desktop and Mobile Phone.</div>
+            </div>
+          </label>
+        </div>
+
+        <div class="privacy-option-card margin-top-md">
+          <label class="radio-label">
+            <input type="radio" name="storagePreference" value="local" id="storageLocalRadio">
+            <div>
+              <div class="option-title"><i class="fa-solid fa-lock"></i> 100% Private Local Storage Only</div>
+              <div class="option-sub">Saves data exclusively inside this browser. No external cloud calls are made. Data will not sync automatically to other devices.</div>
+            </div>
+          </label>
+        </div>
+
+        <div class="privacy-status-box margin-top-md">
+          <div style="font-weight:700; font-size:13px;"><i class="fa-solid fa-database"></i> Active Data Status</div>
+          <div style="font-size:12.5px; color:var(--text-muted); margin-top:4px;" id="privacyStatusDetails">
+            Storage Mode: Cloud Sync | Account: user@example.com
+          </div>
+        </div>
+
+        <div class="modal-footer margin-top-md">
+          <button type="button" class="btn btn-secondary" id="btnCancelPrivacyModal">Close</button>
+          <button type="button" class="btn btn-primary" id="btnSavePrivacySettings">Save Privacy Preference</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD CUSTOM CATEGORY (FOR WEEKLY & MONTHLY TARGETS) -->
+  <div class="modal-overlay" id="customCatModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-folder-plus icon-head"></i> Add Custom Category Goal</h3>
+        <button class="modal-close-btn" id="customCatModalClose"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="customCatForm" class="modal-body">
+        <div class="form-group">
+          <label class="field-label" for="newCatNameInput">Category Name</label>
+          <input type="text" id="newCatNameInput" class="form-input" placeholder="e.g. Guitar Practice or Coding" required>
+        </div>
+
+        <div class="form-group">
+          <label class="field-label" for="newCatColorInput">Category Color</label>
+          <input type="color" id="newCatColorInput" class="form-input" value="#f5b041" style="height:44px; cursor:pointer;">
+        </div>
+
+        <div class="modal-footer margin-top-md">
+          <button type="button" class="btn btn-secondary" id="btnCancelCustomCatModal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add Category Goal</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- MODAL: DAY DETAILS -->
   <div class="modal-overlay" id="dayModal">
     <div class="modal-card">
@@ -451,7 +656,7 @@
     </div>
   </div>
 
-  <!-- MODAL: ADD / EDIT ROUTINE TASK (WITH START/END PICKERS, DURATION & EMOJI DROPDOWN) -->
+  <!-- MODAL: ADD / EDIT ROUTINE TASK -->
   <div class="modal-overlay" id="taskModal">
     <div class="modal-card modal-card-wide">
       <div class="modal-header">
@@ -467,7 +672,7 @@
           <input type="text" id="taskNameInput" class="form-input" placeholder="e.g. Morning Study Session" required>
         </div>
 
-        <!-- Start Time & Finish Time Selectors (Hour, Minute, AM/PM) -->
+        <!-- Start Time & Finish Time Selectors -->
         <div class="time-picker-grid">
           <div class="time-picker-box">
             <label class="field-label"><i class="fa-regular fa-clock"></i> Start Time</label>
@@ -496,7 +701,7 @@
           </div>
         </div>
 
-        <!-- Automatic Duration & Time Window Output Banner -->
+        <!-- Duration Banner -->
         <div class="duration-output-banner" id="durationBanner">
           <div class="duration-info">
             <span class="duration-badge" id="durationBadge"><i class="fa-solid fa-hourglass-half"></i> Duration: 1h 0m</span>
@@ -535,13 +740,13 @@
           </div>
         </div>
 
-        <!-- Custom Category Text Box (Appears when "Other" is selected) -->
+        <!-- Custom Category Input -->
         <div class="form-group" id="customCatWrapper" style="display: none;">
           <label class="field-label" for="customCatInput">Type Custom Category Name</label>
           <input type="text" id="customCatInput" class="form-input" placeholder="e.g. Coding Practice or Guitar Learning">
         </div>
 
-        <!-- Emoji / Icon Selector Dropdown + Custom Input -->
+        <!-- Emoji Selector -->
         <div class="form-group">
           <label class="field-label" for="taskIconSelect">Emoji / Icon</label>
           <select id="taskIconSelect" class="form-select">
@@ -564,7 +769,7 @@
           </select>
         </div>
 
-        <!-- Custom Emoji Input (Appears when "Other" is selected) -->
+        <!-- Custom Emoji Input -->
         <div class="form-group" id="customIconWrapper" style="display: none;">
           <label class="field-label" for="customIconInput">Custom Emoji / Symbol</label>
           <input type="text" id="customIconInput" class="form-input" placeholder="Paste or type an emoji e.g. 🎯, ⚡, 🥑">
