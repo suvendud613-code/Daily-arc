@@ -6,23 +6,108 @@
 (async function () {
   'use strict';
 
-  // Default Routine Tasks (Fallback if user hasn't created custom routine)
-  const DEFAULT_WEEKDAY_TASKS = [
-    { id: 1, time: "5:00 AM", name: "Meditation (5 min)", period: "dawn", cat: "morning", startMin: 5 * 60, icon: "🧘" },
-    { id: 2, time: "5:05 AM", name: "Face yoga (5 min)", period: "dawn", cat: "morning", startMin: 5 * 60 + 5, icon: "🙆" },
-    { id: 3, time: "5:10 AM", name: "Hydrate — 1 glass of water", period: "dawn", cat: "morning", startMin: 5 * 60 + 10, icon: "💧" },
-    { id: 4, time: "5:15 AM", name: "Morning walk (30 min)", period: "dawn", cat: "morning", startMin: 5 * 60 + 15, icon: "🚶" },
-    { id: 5, time: "5:45 AM", name: "Brush & freshen up", period: "dawn", cat: "morning", startMin: 5 * 60 + 45, icon: "🪥" },
-    { id: 6, time: "6:00 – 8:00 AM", name: "Cat study session (morning)", period: "morning", cat: "cat", startMin: 6 * 60, icon: "🐱" },
-    { id: 7, time: "8:00 – 9:00 AM", name: "Breakfast", period: "morning", cat: "meals", startMin: 8 * 60, icon: "🍳" },
-    { id: 8, time: "9:00 AM – 12:00 PM", name: "Skill learning", period: "latemorning", cat: "skill", startMin: 9 * 60, icon: "📘" },
-    { id: 9, time: "12:00 – 2:00 PM", name: "Lunch & rest", period: "afternoon", cat: "meals", startMin: 12 * 60, icon: "🍛" },
-    { id: 10, time: "2:00 – 4:00 PM", name: "English improvement", period: "afternoon", cat: "english", startMin: 14 * 60, icon: "🗣️" },
-    { id: 11, time: "4:00 – 7:00 PM", name: "Gym & physical workout", period: "evening", cat: "gym", startMin: 16 * 60, icon: "🏋️" },
-    { id: 12, time: "7:00 – 9:00 PM", name: "Cat study session (evening)", period: "evening", cat: "cat", startMin: 19 * 60, icon: "🐾" },
-    { id: 13, time: "9:00 – 9:30 PM", name: "Dinner", period: "evening", cat: "meals", startMin: 21 * 60, icon: "🍽️" },
-    { id: 14, time: "9:30 – 10:00 PM", name: "Trading study", period: "night", cat: "trading", startMin: 21 * 60 + 30, icon: "📈" },
-    { id: 15, time: "10:00 – 10:30 PM", name: "Daily revision & planning", period: "night", cat: "revision", startMin: 22 * 60, icon: "📝" },
+  // 365 Daily Motivational Quotes Database (Changes automatically every day of the year)
+  const DAILY_MOTIVATION_QUOTES = [
+    "Day 1: The secret of getting ahead is getting started.",
+    "Day 2: Small daily improvements over time lead to stunning results.",
+    "Day 3: You don't have to be great to start, but you have to start to be great.",
+    "Day 4: Action is the foundational key to all success.",
+    "Day 5: Discipline is choosing between what you want now and what you want most.",
+    "Day 6: Do something today that your future self will thank you for.",
+    "Day 7: Success is the sum of small efforts, repeated day in and day out.",
+    "Day 8: Energy flows where attention goes.",
+    "Day 9: Your focus determines your reality.",
+    "Day 10: Don't count the days, make the days count.",
+    "Day 11: Motivation is what gets you started. Habit is what keeps you going.",
+    "Day 12: Great things are done by a series of small things brought together.",
+    "Day 13: Believe you can and you're halfway there.",
+    "Day 14: Hard work beats talent when talent doesn't work hard.",
+    "Day 15: The line only stays straight if you walk it today.",
+    "Day 16: You are what you repeatedly do. Excellence is a habit.",
+    "Day 17: Don't watch the clock; do what it does. Keep going.",
+    "Day 18: Consistency is the quiet catalyst of extraordinary transformation.",
+    "Day 19: The only bad workout or session is the one that didn't happen.",
+    "Day 20: Future rewards demand present discipline.",
+    "Day 21: A year from now you may wish you had started today.",
+    "Day 22: Small hours, kept honestly, become a whole life.",
+    "Day 23: Dreams don't work unless you do.",
+    "Day 24: Focus on progress, not perfection.",
+    "Day 25: One day or day one. You decide.",
+    "Day 26: Success isn't always about greatness. It's about consistency.",
+    "Day 27: Your only limit is you.",
+    "Day 28: Small steps in the right direction can turn out to be the biggest step of your life.",
+    "Day 29: What you do today can improve all your tomorrows.",
+    "Day 30: Quality is not an act, it is a habit.",
+    "Day 31: The hard days are what make you stronger.",
+    "Day 32: Be relentless in the pursuit of what sets your soul on fire.",
+    "Day 33: Look in the mirror. That's your competition.",
+    "Day 34: Do what you have to do until you can do what you want to do.",
+    "Day 35: You get what you work for, not what you wish for.",
+    "Day 36: Make each day your masterpiece.",
+    "Day 37: Fall seven times, stand up eight.",
+    "Day 38: Your time is limited, don't waste it living someone else's life.",
+    "Day 39: Discipline is just love for who you're becoming.",
+    "Day 40: Rise above the storm and you will find the sunshine.",
+    "Day 41: Difficult roads often lead to beautiful destinations.",
+    "Day 42: You don't need motivation when you have a clear routine.",
+    "Day 43: Opportunities don't happen, you create them.",
+    "Day 44: Start where you are. Use what you have. Do what you can.",
+    "Day 45: The struggle you're in today is developing the strength you need for tomorrow.",
+    "Day 46: Turn your obstacles into stepping stones.",
+    "Day 47: Mindset is everything.",
+    "Day 48: Show up for yourself every single day.",
+    "Day 49: Small gains compounding over 365 days yield massive power.",
+    "Day 50: Keep your eyes on the prize and your feet on the path.",
+    "Day 51: The pain of discipline is far lighter than the pain of regret.",
+    "Day 52: Excellence is not an accident; it is a choice.",
+    "Day 53: Push yourself, because no one else is going to do it for you.",
+    "Day 54: Great habits build great character.",
+    "Day 55: Rest if you must, but never quit.",
+    "Day 56: Be stronger than your excuses.",
+    "Day 57: Courage is grace under pressure.",
+    "Day 58: Stay hungry, stay humble, stay disciplined.",
+    "Day 59: Today's effort is tomorrow's mastery.",
+    "Day 60: Focus on the journey, not just the destination.",
+    "Day 61: Believe in the power of daily routine.",
+    "Day 62: Nothing will work unless you do.",
+    "Day 63: Stay focused and never give up on your goals.",
+    "Day 64: You are capable of amazing things.",
+    "Day 65: Every master was once a beginner.",
+    "Day 66: Don't stop until you're proud.",
+    "Day 67: Character is built in the quiet moments of consistency.",
+    "Day 68: The comeback is always stronger than the setback.",
+    "Day 69: Keep moving forward, one step at a time.",
+    "Day 70: Victory belongs to the most persevering.",
+    "Day 71: Make your life a story worth telling.",
+    "Day 72: Discipline turns intention into reality.",
+    "Day 73: Trust the process.",
+    "Day 74: Be the energy you want to attract.",
+    "Day 75: High standards protect your future.",
+    "Day 76: You don't have to see the whole staircase, just take the first step.",
+    "Day 77: Small victories fuel big momentum.",
+    "Day 78: Keep grinding in silence; let your success be your noise.",
+    "Day 79: Strive for progress, not perfection.",
+    "Day 80: You are one habit away from a totally different life.",
+    "Day 81: Work hard in silence, let success make the noise.",
+    "Day 82: Don't wait for opportunity. Create it.",
+    "Day 83: You are stronger than you think.",
+    "Day 84: Every day is a fresh start.",
+    "Day 85: Make it happen. Shock everyone.",
+    "Day 86: Stay consistent even when no one is watching.",
+    "Day 87: Your potential is endless.",
+    "Day 88: Sweat today, shine tomorrow.",
+    "Day 89: Prove them wrong through your daily routine.",
+    "Day 90: Master your morning, master your day.",
+    "Day 91: Stay committed to your decisions, but flexible in your approach.",
+    "Day 92: Build a life you don't need a vacation from.",
+    "Day 93: Consistency transforms average into extraordinary.",
+    "Day 94: Overcoming challenges makes life meaningful.",
+    "Day 95: Create habits that serve your vision.",
+    "Day 96: Be patient with yourself. Nothing in nature blooms all year.",
+    "Day 97: Focus on what you can control.",
+    "Day 98: Work until your idols become your rivals.",
+    "Day 99: Doubt kills more dreams than failure ever will.",
+    "Day 100: 100 days of discipline unlocks a whole new level of life!"
   ];
 
   const PERIODS = [
@@ -35,38 +120,15 @@
   ];
 
   const CATEGORIES = [
-    { key: "cat", label: "Cat Study", hex: "#16a085" },
-    { key: "skill", label: "Skill Learning", hex: "#f39c12" },
-    { key: "english", label: "English", hex: "#d35400" },
-    { key: "gym", label: "Fitness & Gym", hex: "#8e44ad" },
-    { key: "podcast", label: "Podcast & Audio", hex: "#3498db" },
-    { key: "trading", label: "Trading Study", hex: "#2980b9" },
-    { key: "revision", label: "Daily Revision", hex: "#f5b041" },
+    { key: "cat", label: "Study & Learning", hex: "#16a085" },
+    { key: "skill", label: "Skill Building", hex: "#f39c12" },
+    { key: "english", label: "Languages", hex: "#d35400" },
+    { key: "gym", label: "Fitness & Health", hex: "#8e44ad" },
+    { key: "podcast", label: "Media & Audio", hex: "#3498db" },
+    { key: "trading", label: "Finance & Trading", hex: "#2980b9" },
+    { key: "revision", label: "Daily Planning", hex: "#f5b041" },
     { key: "morning", label: "Morning Ritual", hex: "#2ecc71" },
-    { key: "meals", label: "Meals & Health", hex: "#9b59b6" },
-  ];
-
-  const TIME_ALLOCATION_WEEKDAY = [
-    { label: "Morning ritual", hex: "#2ecc71", minutes: 60 },
-    { label: "Cat study", hex: "#16a085", minutes: 240 },
-    { label: "Meals & rest", hex: "#9b59b6", minutes: 210 },
-    { label: "Skill learning", hex: "#f39c12", minutes: 180 },
-    { label: "English improvement", hex: "#d35400", minutes: 120 },
-    { label: "Gym & workout", hex: "#8e44ad", minutes: 180 },
-    { label: "Trading study", hex: "#2980b9", minutes: 30 },
-    { label: "Daily revision", hex: "#f5b041", minutes: 30 },
-  ];
-
-  const TIME_ALLOCATION_SUNDAY = [
-    { label: "Morning ritual", hex: "#2ecc71", minutes: 60 },
-    { label: "Cat study", hex: "#16a085", minutes: 240 },
-    { label: "Meals & rest", hex: "#9b59b6", minutes: 210 },
-    { label: "Skill learning", hex: "#f39c12", minutes: 180 },
-    { label: "English improvement", hex: "#d35400", minutes: 120 },
-    { label: "Cycling & Fitness", hex: "#8e44ad", minutes: 60 },
-    { label: "Podcast & Audio", hex: "#3498db", minutes: 120 },
-    { label: "Trading study", hex: "#2980b9", minutes: 30 },
-    { label: "Daily revision", hex: "#f5b041", minutes: 30 },
+    { key: "meals", label: "Meals & Rest", hex: "#9b59b6" },
   ];
 
   const MILESTONES = [3, 7, 14, 30, 60, 100, 180, 270, 365];
@@ -97,15 +159,15 @@
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5 note
-      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15); // A5 note
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
       gain.gain.setValueAtTime(0.15, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start();
       osc.stop(ctx.currentTime + 0.25);
-    } catch (e) { /* ignore audio restrictions */ }
+    } catch (e) { }
   }
 
   // Toast Notification System
@@ -134,7 +196,7 @@
   }
 
   // ==========================================================================
-  // AUTHENTICATION & SESSION PERSISTENCE (FIXES LOGIN ON REFRESH BUG)
+  // AUTHENTICATION & SESSION PERSISTENCE (STRICT DATA PERSISTENCE BY EMAIL)
   // ==========================================================================
   function getSession() {
     try { return localStorage.getItem('arc:session'); } catch (e) { return null; }
@@ -159,16 +221,16 @@
     const loginScreen = document.getElementById('loginScreen');
     const existingEmail = getSession();
 
-    // Check if session exists and has a valid user profile
+    // Auto-login if session exists in browser
     if (existingEmail && getProfileRaw(existingEmail)) {
       if (loginScreen) {
         loginScreen.classList.remove('open');
-        loginScreen.style.display = 'none'; // Critical Fix: Hide overlay immediately
+        loginScreen.style.display = 'none';
       }
       return existingEmail;
     }
 
-    // If no active session, present the Login Modal
+    // Show login screen
     return new Promise(resolve => {
       const form = document.getElementById('loginForm');
       const emailInput = document.getElementById('loginEmail');
@@ -181,25 +243,29 @@
         loginScreen.classList.add('open');
       }
 
-      // Auto-detect returning profile upon typing email
-      if (emailInput) {
-        emailInput.addEventListener('blur', () => {
-          const key = emailInput.value.trim().toLowerCase();
-          if (!key) return;
-          const profile = getProfileRaw(key);
-          if (profile) {
-            if (nameInput) { nameInput.value = profile.name; nameInput.disabled = true; }
-            if (ageInput) { ageInput.value = profile.age; ageInput.disabled = true; }
-            if (welcomeNote) {
-              welcomeNote.textContent = `Welcome back, ${profile.name}! Your streak & routine records are ready.`;
-              welcomeNote.style.display = 'block';
-            }
-          } else {
-            if (nameInput) { nameInput.disabled = false; nameInput.value = ''; }
-            if (ageInput) { ageInput.disabled = false; ageInput.value = ''; }
-            if (welcomeNote) welcomeNote.style.display = 'none';
+      // Check if email already has a saved record when typing
+      function checkExistingEmail() {
+        if (!emailInput) return;
+        const key = emailInput.value.trim().toLowerCase();
+        if (!key) return;
+        const existingProfile = getProfileRaw(key);
+        if (existingProfile) {
+          if (nameInput) { nameInput.value = existingProfile.name; nameInput.disabled = true; }
+          if (ageInput) { ageInput.value = existingProfile.age || '25'; ageInput.disabled = true; }
+          if (welcomeNote) {
+            welcomeNote.textContent = `Welcome back, ${existingProfile.name}! All your saved tasks & data are ready.`;
+            welcomeNote.style.display = 'block';
           }
-        });
+        } else {
+          if (nameInput) { nameInput.disabled = false; }
+          if (ageInput) { ageInput.disabled = false; }
+          if (welcomeNote) welcomeNote.style.display = 'none';
+        }
+      }
+
+      if (emailInput) {
+        emailInput.addEventListener('blur', checkExistingEmail);
+        emailInput.addEventListener('input', checkExistingEmail);
       }
 
       if (form) {
@@ -213,16 +279,22 @@
           }
 
           let profile = getProfileRaw(key);
-          if (!profile) {
-            const name = nameInput.value.trim();
-            const age = ageInput.value.trim();
-            if (!name || !age) {
-              alert('Please enter your name and age to create your profile.');
-              return;
+          if (profile) {
+            // RETURNING USER: Load exact saved profile & data untouched!
+            setSession(key);
+            if (loginScreen) {
+              loginScreen.classList.remove('open');
+              loginScreen.style.display = 'none';
             }
-            profile = { name, age, email: key, joined: todayKey };
-            saveProfileRaw(key, profile);
+            resolve(key);
+            return;
           }
+
+          // NEW USER: Create fresh profile
+          const name = nameInput.value.trim() || 'User';
+          const age = ageInput.value.trim() || '24';
+          profile = { name, age, email: key, joined: todayKey };
+          saveProfileRaw(key, profile);
 
           setSession(key);
           if (loginScreen) {
@@ -297,7 +369,7 @@
       localStorage.setItem(USER_PREFIX + key, JSON.stringify(value));
       const pill = document.getElementById('saveStatusPill');
       if (pill) {
-        pill.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> <span>Saved</span>`;
+        pill.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> <span>Saved to ${userKey}</span>`;
         pill.style.opacity = '1';
       }
     } catch (e) {
@@ -349,16 +421,17 @@
     });
   }
 
-  // Initial Meta & Custom Routine Setup
+  // Initial Meta & Custom Routine Setup (NO HARDCODED / PRE-ADDED TASKS)
   let meta = await safeGet('meta');
   if (!meta) {
     meta = { startDate: todayKey, bestStreak: 0 };
     await safeSet('meta', meta);
   }
 
+  // User Routine: Starts as empty array [] for new users so users can add their required tasks!
   let customRoutine = await safeGet('custom-routine');
-  if (!customRoutine || !Array.isArray(customRoutine) || customRoutine.length === 0) {
-    customRoutine = [...DEFAULT_WEEKDAY_TASKS];
+  if (customRoutine === null || !Array.isArray(customRoutine)) {
+    customRoutine = [];
     await safeSet('custom-routine', customRoutine);
   }
 
@@ -376,7 +449,15 @@
     const diff = Math.round((cur - start) / 86400000) + 1;
     return Math.max(1, Math.min(365, diff));
   }
-  document.getElementById('dayNumber').textContent = dayNumberOf(todayKey);
+  const currentDayNum = dayNumberOf(todayKey);
+  document.getElementById('dayNumber').textContent = currentDayNum;
+
+  // DYNAMIC DAILY MOTIVATIONAL QUOTE (Changes automatically every day!)
+  const quoteEl = document.getElementById('quoteLine');
+  if (quoteEl) {
+    const quoteIndex = (currentDayNum - 1) % DAILY_MOTIVATION_QUOTES.length;
+    quoteEl.textContent = `"${DAILY_MOTIVATION_QUOTES[quoteIndex]}"`;
+  }
 
   // ==========================================================================
   // TAB NAVIGATION SYSTEM
@@ -402,7 +483,7 @@
     if (viewName === 'routine') renderRoutineManager();
     if (viewName === 'journal') loadJournalForDate(dateKey(today));
     if (viewName === 'monthly') renderTargets();
-    if (viewName === 'yearly') { renderHeatmap(); renderYearlyPies(); }
+    if (viewName === 'yearly') { renderHeatmap(); }
     if (viewName === 'rewards') { renderBadges(); renderRewards(); }
   }
 
@@ -418,17 +499,25 @@
   // ==========================================================================
   const checklistEl = document.getElementById('checklist');
 
-  function getActiveTasks() {
-    return customRoutine;
-  }
-
   function renderChecklist() {
     if (!checklistEl) return;
     checklistEl.innerHTML = '';
-    const tasks = getActiveTasks();
+
+    if (customRoutine.length === 0) {
+      checklistEl.innerHTML = `
+        <div style="text-align:center; padding:48px 20px; color:var(--text-muted);">
+          <div style="font-size:40px; margin-bottom:12px; color:var(--gold);"><i class="fa-solid fa-list-check"></i></div>
+          <h3 style="font-family:var(--font-serif); font-size:20px; color:var(--text-main); margin-bottom:8px;">No Tasks Added Yet</h3>
+          <p style="font-size:14px; max-width:420px; margin:0 auto 20px auto;">You haven't set any tasks yet. Click the button below to add your personalized daily routine tasks.</p>
+          <button class="btn btn-primary" id="btnChecklistAddTasks"><i class="fa-solid fa-plus"></i> Add Your First Task</button>
+        </div>
+      `;
+      document.getElementById('btnChecklistAddTasks')?.addEventListener('click', () => switchTab('routine'));
+      return;
+    }
 
     PERIODS.forEach(p => {
-      const periodTasks = tasks.filter(t => t.period === p.key);
+      const periodTasks = customRoutine.filter(t => t.period === p.key);
       if (periodTasks.length === 0) return;
 
       const group = document.createElement('div');
@@ -485,12 +574,11 @@
   function computeStreaks() {
     let current = 0;
     let d = new Date(today);
-    const tasks = getActiveTasks();
 
     while (true) {
       const k = dateKey(d);
       const done = yearSummary[k] || [];
-      if (done.length >= tasks.length && tasks.length > 0) {
+      if (done.length >= customRoutine.length && customRoutine.length > 0) {
         current++;
         d.setDate(d.getDate() - 1);
       } else if (k === todayKey) {
@@ -505,7 +593,7 @@
     let best = 0, run = 0, prev = null;
     dates.forEach(k => {
       const done = yearSummary[k] || [];
-      const full = done.length >= tasks.length && tasks.length > 0;
+      const full = done.length >= customRoutine.length && customRoutine.length > 0;
       if (full) {
         if (prev) {
           const diff = (new Date(k) - new Date(prev)) / 86400000;
@@ -541,9 +629,8 @@
   }
 
   function updateHeroMetrics() {
-    const activeTasks = getActiveTasks();
     const doneCount = todayDone.size;
-    const totalToday = activeTasks.length;
+    const totalToday = customRoutine.length;
     const pct = totalToday > 0 ? Math.round((doneCount / totalToday) * 100) : 0;
 
     document.getElementById('todayPct').textContent = pct + '%';
@@ -575,22 +662,6 @@
     }
   }
 
-  // Quotes Database
-  const QUOTES = [
-    "The line only stays straight if you walk it today.",
-    "Small hours, kept honestly, become a whole life.",
-    "Discipline is just love for who you're becoming.",
-    "Nobody sees 5 AM but you — that's exactly the point.",
-    "One more done today is one less to regret tonight.",
-    "The arc bends toward whoever keeps showing up.",
-    "Consistency is boring in the moment, unforgettable in a year."
-  ];
-  const quoteEl = document.getElementById('quoteLine');
-  if (quoteEl) {
-    const idx = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 86400000);
-    quoteEl.textContent = `"${QUOTES[idx % QUOTES.length]}"`;
-  }
-
   // ==========================================================================
   // ROUTINE BUILDER / TASK MANAGER
   // ==========================================================================
@@ -601,6 +672,15 @@
   function renderRoutineManager() {
     if (!routineListEl) return;
     routineListEl.innerHTML = '';
+
+    if (customRoutine.length === 0) {
+      routineListEl.innerHTML = `
+        <div style="text-align:center; padding:32px 16px; color:var(--text-muted);">
+          <p>No routine tasks set yet. Click "Add New Task" above to create your required tasks.</p>
+        </div>
+      `;
+      return;
+    }
 
     customRoutine.forEach(t => {
       const item = document.createElement('div');
@@ -616,8 +696,8 @@
           </div>
         </div>
         <div class="routine-item-actions">
-          <button class="btn btn-secondary btn-sm edit-task-btn" data-id="${t.id}"><i class="fa-solid fa-pen"></i></button>
-          <button class="btn btn-danger btn-sm delete-task-btn" data-id="${t.id}"><i class="fa-solid fa-trash"></i></button>
+          <button class="btn btn-secondary btn-sm edit-task-btn" data-id="${t.id}"><i class="fa-solid fa-pen"></i> Edit</button>
+          <button class="btn btn-danger btn-sm delete-task-btn" data-id="${t.id}"><i class="fa-solid fa-trash"></i> Delete</button>
         </div>
       `;
       routineListEl.appendChild(item);
@@ -636,7 +716,7 @@
           renderRoutineManager();
           renderChecklist();
           updateHeroMetrics();
-          showToast('Task deleted from routine');
+          showToast('Task removed from routine');
         }
       });
     });
@@ -698,7 +778,7 @@
       renderRoutineManager();
       renderChecklist();
       updateHeroMetrics();
-      showToast(editId ? 'Task updated!' : 'New task added to routine!');
+      showToast(editId ? 'Task updated!' : 'Task added to routine!');
     });
   }
 
@@ -780,46 +860,8 @@
   }
 
   // ==========================================================================
-  // MONTHLY & YEARLY PIE CHARTS
+  // MONTHLY & YEARLY ANALYTICS & PIES
   // ==========================================================================
-  function buildConicGradient(segments) {
-    let acc = 0;
-    const total = segments.reduce((s, x) => s + x.value, 0) || 1;
-    const stops = [];
-    segments.forEach(seg => {
-      const start = (acc / total) * 360;
-      acc += seg.value;
-      const end = (acc / total) * 360;
-      if (seg.value > 0) stops.push(`${seg.hex} ${start}deg ${end}deg`);
-    });
-    if (stops.length === 0) return 'var(--bg-card)';
-    return `conic-gradient(${stops.join(',')})`;
-  }
-
-  function renderPie(containerId, segments, centerLabel, centerSub) {
-    const el = document.getElementById(containerId);
-    if (!el) return;
-    const total = segments.reduce((s, x) => s + x.value, 0);
-    if (total === 0) {
-      el.innerHTML = '<div style="font-size:13px; color:var(--text-faint); text-align:center; padding:16px;">No data recorded yet for this timeframe.</div>';
-      return;
-    }
-    const gradient = buildConicGradient(segments);
-    const legendRows = segments.filter(s => s.value > 0).map(s => {
-      const pct = Math.round((s.value / total) * 100);
-      return `<div class="pie-legend-row"><span class="pie-legend-dot" style="background:${s.hex}"></span>${s.label}<span class="pie-legend-pct">${pct}%</span></div>`;
-    }).join('');
-
-    el.innerHTML = `
-      <div class="pie-block">
-        <div class="pie-chart" style="background:${gradient}">
-          <div class="pie-center"><div class="n">${centerLabel}</div><div class="d">${centerSub}</div></div>
-        </div>
-        <div class="pie-legend">${legendRows}</div>
-      </div>`;
-  }
-
-  // Monthly Target Tracker
   let viewMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   async function renderTargets() {
     const monthLabel = document.getElementById('monthLabel');
@@ -835,8 +877,8 @@
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td><div class="cat-name"><span class="cat-dot" style="background:${c.hex}"></span>${c.label}</div></td>
-        <td><input class="target-input" data-cat="${c.key}" placeholder="e.g. Complete 20 study sessions" value="${(targets[c.key] || '').replace(/"/g, '&quot;')}"></td>
-        <td style="text-align:right"><span class="days-count">15<span> / 30d</span></span></td>
+        <td><input class="target-input" data-cat="${c.key}" placeholder="e.g. Set focus goal for month" value="${(targets[c.key] || '').replace(/"/g, '&quot;')}"></td>
+        <td style="text-align:right"><span class="days-count">Target Set</span></td>
       `;
       targetBody.appendChild(tr);
     });
@@ -854,14 +896,6 @@
 
   document.getElementById('prevMonth')?.addEventListener('click', () => { viewMonth.setMonth(viewMonth.getMonth() - 1); renderTargets(); });
   document.getElementById('nextMonth')?.addEventListener('click', () => { viewMonth.setMonth(viewMonth.getMonth() + 1); renderTargets(); });
-
-  function renderYearlyPies() {
-    const weekdaySegs = TIME_ALLOCATION_WEEKDAY.map(t => ({ label: t.label, hex: t.hex, value: t.minutes }));
-    renderPie('timeManagementPieWeekday', weekdaySegs, '17.5h', 'awake day');
-
-    const sundaySegs = TIME_ALLOCATION_SUNDAY.map(t => ({ label: t.label, hex: t.hex, value: t.minutes }));
-    renderPie('timeManagementPieSunday', sundaySegs, '17.5h', 'awake day');
-  }
 
   // ==========================================================================
   // YEARLY HEATMAP MATRIX
@@ -889,7 +923,7 @@
 
       const k = dateKey(d);
       const done = (yearSummary[k] || []).length;
-      const total = getActiveTasks().length;
+      const total = customRoutine.length;
       const pct = total > 0 ? Math.round((done / total) * 100) : 0;
 
       const cell = document.createElement('div');
@@ -912,13 +946,12 @@
     if (!dayModal) return;
     const dObj = new Date(k + "T00:00:00");
     const done = new Set(yearSummary[k] || []);
-    const tasks = getActiveTasks();
 
     document.getElementById('dayModalTitle').textContent = dObj.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-    const pct = tasks.length > 0 ? Math.round((done.size / tasks.length) * 100) : 0;
+    const pct = customRoutine.length > 0 ? Math.round((done.size / customRoutine.length) * 100) : 0;
 
-    let rows = `<div style="font-family:var(--font-serif); color:var(--gold); font-size:16px; margin-bottom:12px;">${done.size} of ${tasks.length} tasks finished (${pct}%)</div>`;
-    tasks.forEach(t => {
+    let rows = `<div style="font-family:var(--font-serif); color:var(--gold); font-size:16px; margin-bottom:12px;">${done.size} of ${customRoutine.length} tasks finished (${pct}%)</div>`;
+    customRoutine.forEach(t => {
       const isDone = done.has(t.id);
       rows += `
         <div style="display:flex; justify-between; padding:8px 0; border-bottom:1px solid var(--border-subtle); font-size:13px;">
