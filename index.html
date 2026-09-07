@@ -25,7 +25,7 @@
         <span class="brand-icon"><i class="fa-solid fa-compass"></i></span>
         The <em>Arc</em>
       </div>
-      <div class="login-tag">Sign in to track your routine, build consistency, and grow every day.</div>
+      <div class="login-tag">Sign in to track your routine, build consistency, and sync data across Desktop & Phone.</div>
       
       <form id="loginForm" autocomplete="on">
         <div class="input-group">
@@ -55,13 +55,13 @@
         <div class="login-welcome" id="loginWelcomeNote"></div>
 
         <button type="submit" class="login-btn" id="loginSubmitBtn">
-          <span>Enter Workspace</span>
+          <span>Enter Workspace & Sync</span>
           <i class="fa-solid fa-arrow-right"></i>
         </button>
 
         <div class="login-note">
-          <i class="fa-solid fa-shield-halved"></i>
-          Your record is saved securely in your browser. Entering an existing email loads your saved data instantly.
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+          Cloud Sync Active: Logging in with the same email syncs your routine seamlessly across Desktop and Mobile Phone.
         </div>
       </form>
     </div>
@@ -105,6 +105,25 @@
 
       <!-- Profile & Utility Controls -->
       <div class="header-actions">
+        <!-- Global Timezone Selector -->
+        <div class="timezone-picker-wrap" title="Select your Country Time Zone">
+          <i class="fa-solid fa-earth-americas tz-icon"></i>
+          <select id="timeZoneSelect" class="timezone-select">
+            <option value="auto">🌐 Local Device Time</option>
+            <option value="Asia/Kolkata">🇮🇳 India (IST +5:30)</option>
+            <option value="America/New_York">🇺🇸 USA East (EST -5:00)</option>
+            <option value="America/Chicago">🇺🇸 USA Central (CST -6:00)</option>
+            <option value="America/Los_Angeles">🇺🇸 USA West (PST -8:00)</option>
+            <option value="Europe/London">🇬🇧 UK (GMT/BST +0:00)</option>
+            <option value="Europe/Paris">🇫🇷 Europe (CET +1:00)</option>
+            <option value="Asia/Dubai">🇦🇪 UAE (GST +4:00)</option>
+            <option value="Asia/Singapore">🇸🇬 Singapore (SGT +8:00)</option>
+            <option value="Asia/Tokyo">🇯🇵 Japan (JST +9:00)</option>
+            <option value="Australia/Sydney">🇦🇺 Australia (AEST +10:00)</option>
+            <option value="UTC">⏱️ UTC</option>
+          </select>
+        </div>
+
         <button class="icon-btn" id="soundToggleBtn" title="Toggle sound effects">
           <i class="fa-solid fa-volume-high" id="soundIcon"></i>
         </button>
@@ -120,9 +139,11 @@
             <div class="menu-header">
               <div class="menu-user-name" id="menuUserName">User Name</div>
               <div class="menu-user-email" id="menuUserEmail">user@example.com</div>
+              <div class="menu-sync-badge"><i class="fa-solid fa-rotate"></i> Cloud Sync Active</div>
             </div>
             <div class="menu-divider"></div>
-            <button id="exportDataBtn"><i class="fa-solid fa-download"></i> Export Data Backup</button>
+            <button id="btnManualSync"><i class="fa-solid fa-cloud-arrow-down"></i> Sync Cloud Data Now</button>
+            <button id="exportDataBtn"><i class="fa-solid fa-download"></i> Export Backup File</button>
             <label id="importDataLabel" class="menu-label">
               <i class="fa-solid fa-upload"></i> Restore Backup
               <input type="file" id="importDataInput" accept="application/json" hidden>
@@ -172,7 +193,7 @@
             <div class="ring-title">Today's Progress</div>
             <div class="ring-sub" id="doneTodaySub">0 of 0 tasks finished</div>
             <div class="save-status-pill" id="saveStatusPill">
-              <i class="fa-solid fa-cloud-arrow-up"></i> <span>Auto-saved</span>
+              <i class="fa-solid fa-cloud-arrow-up"></i> <span>Cloud Synced</span>
             </div>
           </div>
         </div>
@@ -213,7 +234,7 @@
         <div class="section-head">
           <div>
             <h2><i class="fa-solid fa-calendar-check icon-head"></i> Today's Schedule — <span id="todayDate">Monday</span></h2>
-            <div class="hint" id="todayHint">Tap a task when completed. Tasks auto-unlock as their time arrives.</div>
+            <div class="hint" id="todayHint">Tap a task when completed. Tasks auto-unlock as their scheduled start time arrives.</div>
           </div>
           <div class="head-actions">
             <button class="btn btn-secondary btn-sm" id="btnGoToRoutineBuilder">
@@ -228,13 +249,13 @@
       </div>
     </div>
 
-    <!-- PAGE 2: ROUTINE BUILDER VIEW (Add / Edit / Delete Custom Tasks) -->
+    <!-- PAGE 2: ROUTINE BUILDER VIEW -->
     <div class="view" id="view-routine">
       <div class="page-banner routine-banner">
         <div class="banner-overlay"></div>
         <div class="banner-text">
           <div class="t"><i class="fa-solid fa-sliders"></i> Routine Builder</div>
-          <div class="s">Design your perfect daily routine. Add new habits, change times, or reorganize sessions.</div>
+          <div class="s">Design your required routine tasks. Set start/finish times and icons.</div>
         </div>
       </div>
 
@@ -242,7 +263,7 @@
         <div class="section-head">
           <div>
             <h2>Manage Routine Tasks</h2>
-            <div class="hint">Changes saved here apply immediately to your active daily schedule.</div>
+            <div class="hint">Tasks added here sync immediately across your Desktop and Mobile Phone.</div>
           </div>
           <button class="btn btn-primary" id="btnOpenAddTaskModal">
             <i class="fa-solid fa-plus"></i> Add New Task
@@ -291,7 +312,7 @@
           </div>
 
           <div class="journal-footer">
-            <span class="save-indicator-text" id="journalSaveText">Auto-saved to local memory</span>
+            <span class="save-indicator-text" id="journalSaveText">Synced to cloud & local memory</span>
             <button class="btn btn-primary" id="btnSaveJournal">
               <i class="fa-solid fa-floppy-disk"></i> Save Reflection
             </button>
@@ -335,7 +356,7 @@
               <tr>
                 <th>Category</th>
                 <th>Target Focus for Month</th>
-                <th style="text-align:right">Days Completed</th>
+                <th style="text-align:right">Status</th>
               </tr>
             </thead>
             <tbody id="targetBody">
@@ -344,29 +365,9 @@
           </table>
         </div>
       </div>
-
-      <div class="section-card margin-top-lg">
-        <div class="section-head">
-          <div>
-            <h2>Monthly Completion Overview</h2>
-            <div class="hint" id="monthlyRangeHint">Range</div>
-          </div>
-        </div>
-
-        <div class="pie-grid">
-          <div class="pie-card">
-            <h4 class="pie-card-title">Days Completed This Month</h4>
-            <div id="monthlyCompletionPie" class="pie-container"></div>
-          </div>
-          <div class="pie-card">
-            <h4 class="pie-card-title">Category Focus Distribution</h4>
-            <div id="monthlyCategoryPie" class="pie-container"></div>
-          </div>
-        </div>
-      </div>
     </div>
 
-    <!-- PAGE 5: YEARLY HEATMAP & ANALYTICS VIEW -->
+    <!-- PAGE 5: YEARLY HEATMAP VIEW -->
     <div class="view" id="view-yearly">
       <div class="page-banner yearly-banner">
         <div class="banner-overlay"></div>
@@ -396,41 +397,6 @@
           <div class="legend-box level-3"></div>
           <div class="legend-box level-4"></div>
           <span>100% Completed</span>
-        </div>
-      </div>
-
-      <div class="section-card margin-top-lg">
-        <div class="section-head">
-          <h2>Yearly Focus & Time Breakdown</h2>
-        </div>
-        <div class="pie-grid">
-          <div class="pie-card">
-            <h4 class="pie-card-title">Year-to-Date Consistency</h4>
-            <div id="yearlyCompletionPie" class="pie-container"></div>
-          </div>
-          <div class="pie-card">
-            <h4 class="pie-card-title">Category Distribution</h4>
-            <div id="yearlyCategoryPie" class="pie-container"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="section-card margin-top-lg">
-        <div class="section-head">
-          <div>
-            <h2>Time Management Breakdown</h2>
-            <div class="hint">Allocation of your daily 17.5 awake hours</div>
-          </div>
-        </div>
-        <div class="pie-grid">
-          <div class="pie-card">
-            <h4 class="pie-card-title">Standard Schedule (Mon – Sat)</h4>
-            <div id="timeManagementPieWeekday" class="pie-container"></div>
-          </div>
-          <div class="pie-card">
-            <h4 class="pie-card-title">Sunday Custom Schedule</h4>
-            <div id="timeManagementPieSunday" class="pie-container"></div>
-          </div>
         </div>
       </div>
     </div>
@@ -472,7 +438,7 @@
 
   </main>
 
-  <!-- MODAL: DAY DETAILS (Triggered when clicking a heatmap cell) -->
+  <!-- MODAL: DAY DETAILS -->
   <div class="modal-overlay" id="dayModal">
     <div class="modal-card">
       <div class="modal-header">
@@ -485,9 +451,9 @@
     </div>
   </div>
 
-  <!-- MODAL: ADD / EDIT ROUTINE TASK -->
+  <!-- MODAL: ADD / EDIT ROUTINE TASK (WITH START/END PICKERS, DURATION & EMOJI DROPDOWN) -->
   <div class="modal-overlay" id="taskModal">
-    <div class="modal-card">
+    <div class="modal-card modal-card-wide">
       <div class="modal-header">
         <h3 id="taskModalTitle">Add New Task</h3>
         <button class="modal-close-btn" id="taskModalClose"><i class="fa-solid fa-xmark"></i></button>
@@ -495,24 +461,51 @@
       <form id="taskForm" class="modal-body">
         <input type="hidden" id="editTaskId">
         
+        <!-- Task Name -->
         <div class="form-group">
           <label class="field-label" for="taskNameInput">Task Name</label>
-          <input type="text" id="taskNameInput" class="form-input" placeholder="e.g. Deep Work Session" required>
+          <input type="text" id="taskNameInput" class="form-input" placeholder="e.g. Morning Study Session" required>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label class="field-label" for="taskTimeInput">Display Time Window</label>
-            <input type="text" id="taskTimeInput" class="form-input" placeholder="e.g. 6:00 – 8:00 AM" required>
+        <!-- Start Time & Finish Time Selectors (Hour, Minute, AM/PM) -->
+        <div class="time-picker-grid">
+          <div class="time-picker-box">
+            <label class="field-label"><i class="fa-regular fa-clock"></i> Start Time</label>
+            <div class="time-select-row">
+              <select id="startHourSelect" class="form-select time-select"></select>
+              <span class="colon">:</span>
+              <select id="startMinSelect" class="form-select time-select"></select>
+              <select id="startAmpmSelect" class="form-select time-select ampm">
+                <option value="AM">AM</option>
+                <option value="PM">PM</option>
+              </select>
+            </div>
           </div>
 
-          <div class="form-group">
-            <label class="field-label" for="taskStartMinInput">Unlock Hour (24h)</label>
-            <input type="number" id="taskStartMinInput" class="form-input" min="0" max="23" placeholder="e.g. 6 for 6 AM" required>
+          <div class="time-picker-box">
+            <label class="field-label"><i class="fa-solid fa-flag-checkered"></i> Finish Time (End Time)</label>
+            <div class="time-select-row">
+              <select id="endHourSelect" class="form-select time-select"></select>
+              <span class="colon">:</span>
+              <select id="endMinSelect" class="form-select time-select"></select>
+              <select id="endAmpmSelect" class="form-select time-select ampm">
+                <option value="AM">AM</option>
+                <option value="PM">PM</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        <div class="form-row">
+        <!-- Automatic Duration & Time Window Output Banner -->
+        <div class="duration-output-banner" id="durationBanner">
+          <div class="duration-info">
+            <span class="duration-badge" id="durationBadge"><i class="fa-solid fa-hourglass-half"></i> Duration: 1h 0m</span>
+            <span class="time-range-text" id="timeRangeText">Display: 06:00 AM – 07:00 AM</span>
+          </div>
+        </div>
+
+        <!-- Day Period & Category -->
+        <div class="form-row margin-top-md">
           <div class="form-group">
             <label class="field-label" for="taskPeriodInput">Day Period</label>
             <select id="taskPeriodInput" class="form-select">
@@ -526,29 +519,60 @@
           </div>
 
           <div class="form-group">
-            <label class="field-label" for="taskCatInput">Category</label>
-            <select id="taskCatInput" class="form-select">
-              <option value="cat">Cat Study</option>
-              <option value="skill">Skill Learning</option>
-              <option value="english">English</option>
-              <option value="gym">Fitness & Gym</option>
-              <option value="podcast">Podcast & Audio</option>
-              <option value="trading">Trading Study</option>
-              <option value="revision">Daily Revision</option>
+            <label class="field-label" for="taskCatSelect">Category</label>
+            <select id="taskCatSelect" class="form-select">
+              <option value="study">Study Session</option>
+              <option value="skill">Skill Building</option>
+              <option value="english">Languages & English</option>
+              <option value="gym">Fitness & Health</option>
+              <option value="podcast">Media & Audio</option>
+              <option value="trading">Finance & Trading</option>
+              <option value="revision">Daily Planning</option>
               <option value="morning">Morning Ritual</option>
-              <option value="meals">Meals & Health</option>
+              <option value="meals">Meals & Rest</option>
+              <option value="other">Other (Custom Category)</option>
             </select>
           </div>
         </div>
 
+        <!-- Custom Category Text Box (Appears when "Other" is selected) -->
+        <div class="form-group" id="customCatWrapper" style="display: none;">
+          <label class="field-label" for="customCatInput">Type Custom Category Name</label>
+          <input type="text" id="customCatInput" class="form-input" placeholder="e.g. Coding Practice or Guitar Learning">
+        </div>
+
+        <!-- Emoji / Icon Selector Dropdown + Custom Input -->
         <div class="form-group">
-          <label class="field-label" for="taskIconInput">Emoji / Icon</label>
-          <input type="text" id="taskIconInput" class="form-input" placeholder="e.g. 🧘, 📘, 🏋️" required>
+          <label class="field-label" for="taskIconSelect">Emoji / Icon</label>
+          <select id="taskIconSelect" class="form-select">
+            <option value="📚">📚 Study & Books</option>
+            <option value="🧘">🧘 Meditation & Mindfulness</option>
+            <option value="🏋️">🏋️ Fitness & Gym</option>
+            <option value="💻">💻 Coding & Work</option>
+            <option value="🗣️">🗣️ Language & Speaking</option>
+            <option value="📈">📈 Trading & Finance</option>
+            <option value="🎨">🎨 Creative & Art</option>
+            <option value="💧">💧 Water & Hydration</option>
+            <option value="🍳">🍳 Breakfast & Meals</option>
+            <option value="🏃">🏃 Running & Walk</option>
+            <option value="🐾">🐾 Pet Care</option>
+            <option value="🎧">🎧 Podcast & Music</option>
+            <option value="📝">📝 Journal & Notes</option>
+            <option value="😴">😴 Sleep & Rest</option>
+            <option value="🚀">🚀 Growth & Goals</option>
+            <option value="other">Other (Type Custom Emoji / Icon)...</option>
+          </select>
+        </div>
+
+        <!-- Custom Emoji Input (Appears when "Other" is selected) -->
+        <div class="form-group" id="customIconWrapper" style="display: none;">
+          <label class="field-label" for="customIconInput">Custom Emoji / Symbol</label>
+          <input type="text" id="customIconInput" class="form-input" placeholder="Paste or type an emoji e.g. 🎯, ⚡, 🥑">
         </div>
 
         <div class="modal-footer margin-top-md">
           <button type="button" class="btn btn-secondary" id="btnCancelTaskModal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save Task</button>
+          <button type="submit" class="btn btn-primary">Save Routine Task</button>
         </div>
       </form>
     </div>

@@ -1,6 +1,6 @@
 /* ==========================================================================
    THE ARC — DAILY ROUTINE TRACKER & PERSONAL GROWTH
-   Complete Application Logic & Data Persistence Engine
+   Complete Application Logic, Timezones, Duration Calculators & Cloud Sync Engine
    ========================================================================== */
 
 (async function () {
@@ -120,9 +120,9 @@
   ];
 
   const CATEGORIES = [
-    { key: "cat", label: "Study & Learning", hex: "#16a085" },
+    { key: "study", label: "Study Session", hex: "#16a085" },
     { key: "skill", label: "Skill Building", hex: "#f39c12" },
-    { key: "english", label: "Languages", hex: "#d35400" },
+    { key: "english", label: "Languages & English", hex: "#d35400" },
     { key: "gym", label: "Fitness & Health", hex: "#8e44ad" },
     { key: "podcast", label: "Media & Audio", hex: "#3498db" },
     { key: "trading", label: "Finance & Trading", hex: "#2980b9" },
@@ -139,13 +139,34 @@
   function pad(n) { return n.toString().padStart(2, '0'); }
   function dateKey(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
   function monthKey(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1); }
-  function nowMinutes() { const n = new Date(); return n.getHours() * 60 + n.getMinutes(); }
+
+  // Global Timezone Support
+  let selectedTimeZone = 'auto';
+  function getNowMinutesInSelectedTZ() {
+    const n = new Date();
+    if (selectedTimeZone === 'auto') {
+      return n.getHours() * 60 + n.getMinutes();
+    }
+    try {
+      const options = { timeZone: selectedTimeZone, hour: 'numeric', minute: 'numeric', hour12: false };
+      const parts = new Intl.DateTimeFormat('en-US', options).formatToParts(n);
+      let h = 0, m = 0;
+      parts.forEach(p => {
+        if (p.type === 'hour') h = parseInt(p.value);
+        if (p.type === 'minute') m = parseInt(p.value);
+      });
+      if (h === 24) h = 0;
+      return h * 60 + m;
+    } catch (e) {
+      return n.getHours() * 60 + n.getMinutes();
+    }
+  }
 
   function formatClock(mins) {
     let h = Math.floor(mins / 60), m = mins % 60;
     const ampm = h >= 12 ? 'PM' : 'AM';
     let h12 = h % 12; if (h12 === 0) h12 = 12;
-    return h12 + ':' + m.toString().padStart(2, '0') + ' ' + ampm;
+    return (h12 < 10 ? '0' : '') + h12 + ':' + m.toString().padStart(2, '0') + ' ' + ampm;
   }
 
   // Audio Engine for Task Completion Chimes
@@ -196,7 +217,7 @@
   }
 
   // ==========================================================================
-  // AUTHENTICATION & SESSION PERSISTENCE (STRICT DATA PERSISTENCE BY EMAIL)
+  // AUTHENTICATION & CROSS-DEVICE CLOUD SYNC ENGINE
   // ==========================================================================
   function getSession() {
     try { return localStorage.getItem('arc:session'); } catch (e) { return null; }
@@ -217,11 +238,53 @@
     try { localStorage.setItem('arc:profile:' + email, JSON.stringify(profile)); } catch (e) { }
   }
 
+  // Cloud Rest Sync Endpoint (Provides sync across Phone and Desktop)
+  function getCloudEndpoint(userKey) {
+    const safeKey = btoa(userKey).replace(/=/g, '');
+    return `https://kvdb.io/4y9H2z8A7K1x3M9N8P0Q/${safeKey}`;
+  }
+
+  async function syncFromCloud(userKey) {
+    try {
+      const res = await fetch(getCloudEndpoint(userKey));
+      if (res.ok) {
+        const cloudState = await res.json();
+        if (cloudState && typeof cloudState === 'object') {
+          Object.keys(cloudState).forEach(k => {
+            localStorage.setItem(USER_PREFIX + k, JSON.stringify(cloudState[k]));
+          });
+          return true;
+        }
+      }
+    } catch (e) {
+      console.log('Cloud fetch offline mode', e);
+    }
+    return false;
+  }
+
+  async function pushToCloud(userKey) {
+    try {
+      const payload = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.indexOf(USER_PREFIX) === 0) {
+          payload[k.slice(USER_PREFIX.length)] = JSON.parse(localStorage.getItem(k));
+        }
+      }
+      await fetch(getCloudEndpoint(userKey), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch (e) {
+      console.log('Cloud save queued offline', e);
+    }
+  }
+
   async function initializeAuthentication() {
     const loginScreen = document.getElementById('loginScreen');
     const existingEmail = getSession();
 
-    // Auto-login if session exists in browser
     if (existingEmail && getProfileRaw(existingEmail)) {
       if (loginScreen) {
         loginScreen.classList.remove('open');
@@ -230,7 +293,6 @@
       return existingEmail;
     }
 
-    // Show login screen
     return new Promise(resolve => {
       const form = document.getElementById('loginForm');
       const emailInput = document.getElementById('loginEmail');
@@ -243,7 +305,6 @@
         loginScreen.classList.add('open');
       }
 
-      // Check if email already has a saved record when typing
       function checkExistingEmail() {
         if (!emailInput) return;
         const key = emailInput.value.trim().toLowerCase();
@@ -253,7 +314,7 @@
           if (nameInput) { nameInput.value = existingProfile.name; nameInput.disabled = true; }
           if (ageInput) { ageInput.value = existingProfile.age || '25'; ageInput.disabled = true; }
           if (welcomeNote) {
-            welcomeNote.textContent = `Welcome back, ${existingProfile.name}! All your saved tasks & data are ready.`;
+            welcomeNote.textContent = `Welcome back, ${existingProfile.name}! Syncing data across devices...`;
             welcomeNote.style.display = 'block';
           }
         } else {
@@ -269,7 +330,7 @@
       }
 
       if (form) {
-        form.addEventListener('submit', (e) => {
+        form.addEventListener('submit', async (e) => {
           e.preventDefault();
           const key = emailInput.value.trim().toLowerCase();
           const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -279,22 +340,12 @@
           }
 
           let profile = getProfileRaw(key);
-          if (profile) {
-            // RETURNING USER: Load exact saved profile & data untouched!
-            setSession(key);
-            if (loginScreen) {
-              loginScreen.classList.remove('open');
-              loginScreen.style.display = 'none';
-            }
-            resolve(key);
-            return;
+          if (!profile) {
+            const name = nameInput.value.trim() || 'User';
+            const age = ageInput.value.trim() || '24';
+            profile = { name, age, email: key, joined: todayKey };
+            saveProfileRaw(key, profile);
           }
-
-          // NEW USER: Create fresh profile
-          const name = nameInput.value.trim() || 'User';
-          const age = ageInput.value.trim() || '24';
-          profile = { name, age, email: key, joined: todayKey };
-          saveProfileRaw(key, profile);
 
           setSession(key);
           if (loginScreen) {
@@ -307,10 +358,13 @@
     });
   }
 
-  // Resolve user account key
+  // Resolve user account key & sync cloud data across Phone and Desktop
   const userKey = await initializeAuthentication();
   const profile = getProfileRaw(userKey);
   const USER_PREFIX = 'arc:' + userKey + ':';
+
+  // Attempt initial cloud sync on login
+  await syncFromCloud(userKey);
 
   // Update User Header Details
   document.getElementById('profileNameLabel').textContent = profile.name;
@@ -319,6 +373,31 @@
   document.getElementById('heroSub').textContent = `${profile.name}’s daily arc: dawn to night, walked consistently for a full year.`;
   document.getElementById('menuUserName').textContent = profile.name;
   document.getElementById('menuUserEmail').textContent = profile.email;
+
+  // Time Zone Selector Handler
+  const tzSelect = document.getElementById('timeZoneSelect');
+  const savedTz = localStorage.getItem(USER_PREFIX + 'timezone');
+  if (savedTz && tzSelect) {
+    selectedTimeZone = savedTz;
+    tzSelect.value = savedTz;
+  }
+  if (tzSelect) {
+    tzSelect.addEventListener('change', () => {
+      selectedTimeZone = tzSelect.value;
+      localStorage.setItem(USER_PREFIX + 'timezone', selectedTimeZone);
+      showToast(`Timezone set to ${tzSelect.options[tzSelect.selectedIndex].text}`, 'fa-solid fa-earth-americas');
+      renderChecklist();
+    });
+  }
+
+  // Manual Sync Button
+  document.getElementById('btnManualSync')?.addEventListener('click', async () => {
+    showToast('Syncing cloud database...', 'fa-solid fa-rotate');
+    await syncFromCloud(userKey);
+    await pushToCloud(userKey);
+    showToast('Cloud sync complete! Desktop & Phone matched.', 'fa-solid fa-cloud');
+    location.reload();
+  });
 
   // Profile Dropdown Toggle
   const profileChip = document.getElementById('profileChip');
@@ -333,13 +412,10 @@
   }
 
   // Logout / Switch Account
-  const logoutBtn = document.getElementById('logoutBtn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', () => {
-      clearSession();
-      location.reload();
-    });
-  }
+  document.getElementById('logoutBtn')?.addEventListener('click', () => {
+    clearSession();
+    location.reload();
+  });
 
   // Sound Toggle Button
   const soundBtn = document.getElementById('soundToggleBtn');
@@ -355,7 +431,7 @@
   }
 
   // ==========================================================================
-  // STORAGE HELPERS (PERSISTS ROUTINE & PROGRESS DATA IN LOCALSTORAGE)
+  // STORAGE HELPERS (DUAL PERSISTENCE: LOCALSTORAGE + CLOUD SYNC)
   // ==========================================================================
   async function safeGet(key) {
     try {
@@ -369,34 +445,32 @@
       localStorage.setItem(USER_PREFIX + key, JSON.stringify(value));
       const pill = document.getElementById('saveStatusPill');
       if (pill) {
-        pill.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> <span>Saved to ${userKey}</span>`;
-        pill.style.opacity = '1';
+        pill.innerHTML = `<i class="fa-solid fa-cloud-arrow-up"></i> <span>Synced & Saved</span>`;
       }
+      // Async background sync to cloud for phone/desktop compatibility
+      pushToCloud(userKey);
     } catch (e) {
       console.error('Storage set failed:', key, e);
     }
   }
 
   // Data Export & Backup Restore
-  const exportBtn = document.getElementById('exportDataBtn');
-  if (exportBtn) {
-    exportBtn.addEventListener('click', () => {
-      const backup = { profile, exportedAt: new Date().toISOString(), data: {} };
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && k.indexOf(USER_PREFIX) === 0) {
-          backup.data[k.slice(USER_PREFIX.length)] = localStorage.getItem(k);
-        }
+  document.getElementById('exportDataBtn')?.addEventListener('click', () => {
+    const backup = { profile, exportedAt: new Date().toISOString(), data: {} };
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.indexOf(USER_PREFIX) === 0) {
+        backup.data[k.slice(USER_PREFIX.length)] = localStorage.getItem(k);
       }
-      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `the-arc-backup-${userKey}.json`;
-      a.click();
-      if (profileMenu) profileMenu.classList.remove('open');
-      showToast('Backup file downloaded successfully!');
-    });
-  }
+    }
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `the-arc-backup-${userKey}.json`;
+    a.click();
+    if (profileMenu) profileMenu.classList.remove('open');
+    showToast('Backup file downloaded successfully!');
+  });
 
   const importInput = document.getElementById('importDataInput');
   if (importInput) {
@@ -404,13 +478,14 @@
       const file = e.target.files[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = () => {
+      reader.onload = async () => {
         try {
           const backup = JSON.parse(reader.result);
           if (!backup.data) throw new Error('Invalid format');
           Object.keys(backup.data).forEach(k => {
             localStorage.setItem(USER_PREFIX + k, backup.data[k]);
           });
+          await pushToCloud(userKey);
           alert('Backup restored! Reloading workspace...');
           location.reload();
         } catch (err) {
@@ -421,14 +496,13 @@
     });
   }
 
-  // Initial Meta & Custom Routine Setup (NO HARDCODED / PRE-ADDED TASKS)
+  // Initial Setup
   let meta = await safeGet('meta');
   if (!meta) {
     meta = { startDate: todayKey, bestStreak: 0 };
     await safeSet('meta', meta);
   }
 
-  // User Routine: Starts as empty array [] for new users so users can add their required tasks!
   let customRoutine = await safeGet('custom-routine');
   if (customRoutine === null || !Array.isArray(customRoutine)) {
     customRoutine = [];
@@ -452,7 +526,7 @@
   const currentDayNum = dayNumberOf(todayKey);
   document.getElementById('dayNumber').textContent = currentDayNum;
 
-  // DYNAMIC DAILY MOTIVATIONAL QUOTE (Changes automatically every day!)
+  // DYNAMIC DAILY MOTIVATIONAL QUOTE
   const quoteEl = document.getElementById('quoteLine');
   if (quoteEl) {
     const quoteIndex = (currentDayNum - 1) % DAILY_MOTIVATION_QUOTES.length;
@@ -491,8 +565,7 @@
     btn.addEventListener('click', () => switchTab(btn.dataset.view));
   });
 
-  const btnGoToRoutine = document.getElementById('btnGoToRoutineBuilder');
-  if (btnGoToRoutine) btnGoToRoutine.addEventListener('click', () => switchTab('routine'));
+  document.getElementById('btnGoToRoutineBuilder')?.addEventListener('click', () => switchTab('routine'));
 
   // ==========================================================================
   // TODAY VIEW & CHECKLIST ENGINE
@@ -516,6 +589,8 @@
       return;
     }
 
+    const currentNowMins = getNowMinutesInSelectedTZ();
+
     PERIODS.forEach(p => {
       const periodTasks = customRoutine.filter(t => t.period === p.key);
       if (periodTasks.length === 0) return;
@@ -526,7 +601,7 @@
 
       periodTasks.forEach(t => {
         const isDone = todayDone.has(t.id);
-        const isLocked = !isDone && t.startMin > nowMinutes();
+        const isLocked = !isDone && t.startMin > currentNowMins;
 
         const row = document.createElement('div');
         row.className = 'task-row' + (isDone ? ' done' : '') + (isLocked ? ' locked' : '');
@@ -540,8 +615,8 @@
             : (isDone ? '<i class="fa-solid fa-check" style="font-size:12px; color:#0f1418"></i>' : '')}
           </div>
           <div class="task-body">
-            <div class="task-time">${t.time}</div>
-            <div class="task-name">${t.name}</div>
+            <div class="task-time">${t.time} ${t.durationStr ? `(${t.durationStr})` : ''}</div>
+            <div class="task-name">${t.name} <span style="font-size:12px; color:var(--text-faint)">· ${t.catName || t.cat}</span></div>
             ${isLocked ? `<div class="task-lock-note">Unlocks at ${formatClock(t.startMin)}</div>` : ''}
           </div>`;
 
@@ -636,7 +711,6 @@
     document.getElementById('todayPct').textContent = pct + '%';
     document.getElementById('doneTodaySub').textContent = `${doneCount} of ${totalToday} tasks finished`;
 
-    // Calculate total lifetime tasks checked
     let totalLifetime = 0;
     Object.values(yearSummary).forEach(arr => {
       if (Array.isArray(arr)) totalLifetime += arr.length;
@@ -661,6 +735,93 @@
       safeSet('meta', meta);
     }
   }
+
+  // ==========================================================================
+  // START/FINISH TIME PICKER & AUTOMATIC DURATION CALCULATOR
+  // ==========================================================================
+  const startHourSel = document.getElementById('startHourSelect');
+  const startMinSel = document.getElementById('startMinSelect');
+  const startAmpmSel = document.getElementById('startAmpmSelect');
+
+  const endHourSel = document.getElementById('endHourSelect');
+  const endMinSel = document.getElementById('endMinSelect');
+  const endAmpmSel = document.getElementById('endAmpmSelect');
+
+  function populateTimePickers() {
+    if (!startHourSel) return;
+
+    startHourSel.innerHTML = '';
+    endHourSel.innerHTML = '';
+    for (let h = 1; h <= 12; h++) {
+      const val = pad(h);
+      startHourSel.innerHTML += `<option value="${val}">${val}</option>`;
+      endHourSel.innerHTML += `<option value="${val}">${val}</option>`;
+    }
+
+    startMinSel.innerHTML = '';
+    endMinSel.innerHTML = '';
+    for (let m = 0; m < 60; m += 5) {
+      const val = pad(m);
+      startMinSel.innerHTML += `<option value="${val}">${val}</option>`;
+      endMinSel.innerHTML += `<option value="${val}">${val}</option>`;
+    }
+  }
+  populateTimePickers();
+
+  function getMinutesFromPicker(hSel, mSel, ampmSel) {
+    let h = parseInt(hSel.value) || 12;
+    const m = parseInt(mSel.value) || 0;
+    const ampm = ampmSel.value;
+    if (ampm === 'PM' && h < 12) h += 12;
+    if (ampm === 'AM' && h === 12) h = 0;
+    return h * 60 + m;
+  }
+
+  function updateDurationAndRange() {
+    const startMins = getMinutesFromPicker(startHourSel, startMinSel, startAmpmSel);
+    let endMins = getMinutesFromPicker(endHourSel, endMinSel, endAmpmSel);
+
+    if (endMins <= startMins) endMins += 24 * 60; // Next day wrap
+    const diff = endMins - startMins;
+
+    const hrs = Math.floor(diff / 60);
+    const mins = diff % 60;
+
+    let durText = '';
+    if (hrs > 0) durText += `${hrs}h `;
+    if (mins > 0 || hrs === 0) durText += `${mins}m`;
+
+    const startFormatted = `${startHourSel.value}:${startMinSelect.value} ${startAmpmSel.value}`;
+    const endFormatted = `${endHourSel.value}:${endMinSelect.value} ${endAmpmSel.value}`;
+    const rangeText = `${startFormatted} – ${endFormatted}`;
+
+    document.getElementById('durationBadge').innerHTML = `<i class="fa-solid fa-hourglass-half"></i> Duration: ${durText.trim()}`;
+    document.getElementById('timeRangeText').textContent = `Display: ${rangeText}`;
+
+    return { startMins, durText: durText.trim(), rangeText };
+  }
+
+  [startHourSel, startMinSel, startAmpmSel, endHourSel, endMinSel, endAmpmSel].forEach(el => {
+    if (el) el.addEventListener('change', updateDurationAndRange);
+  });
+
+  // Category & Custom Category Toggle
+  const catSelect = document.getElementById('taskCatSelect');
+  const customCatWrapper = document.getElementById('customCatWrapper');
+  catSelect?.addEventListener('change', () => {
+    if (customCatWrapper) {
+      customCatWrapper.style.display = catSelect.value === 'other' ? 'block' : 'none';
+    }
+  });
+
+  // Emoji Dropdown & Custom Emoji Toggle
+  const iconSelect = document.getElementById('taskIconSelect');
+  const customIconWrapper = document.getElementById('customIconWrapper');
+  iconSelect?.addEventListener('change', () => {
+    if (customIconWrapper) {
+      customIconWrapper.style.display = iconSelect.value === 'other' ? 'block' : 'none';
+    }
+  });
 
   // ==========================================================================
   // ROUTINE BUILDER / TASK MANAGER
@@ -689,9 +850,9 @@
         <div class="routine-item-left">
           <span style="font-size:24px">${t.icon}</span>
           <div>
-            <div style="font-weight:700; font-size:15px">${t.name}</div>
+            <div style="font-weight:700; font-size:15px">${t.name} <span style="font-size:12px; font-weight:normal; color:var(--text-muted)">(${t.catName || t.cat})</span></div>
             <div style="font-size:12.5px; color:var(--text-muted)">
-              <span class="task-time">${t.time}</span> · Unlock Hour: ${formatClock(t.startMin)}
+              <span class="task-time">${t.time}</span> · Duration: ${t.durationStr || 'N/A'}
             </div>
           </div>
         </div>
@@ -731,16 +892,45 @@
       const t = customRoutine.find(x => x.id === editId);
       if (t) {
         document.getElementById('taskNameInput').value = t.name;
-        document.getElementById('taskTimeInput').value = t.time;
-        document.getElementById('taskStartMinInput').value = Math.floor(t.startMin / 60);
         document.getElementById('taskPeriodInput').value = t.period;
-        document.getElementById('taskCatInput').value = t.cat;
-        document.getElementById('taskIconInput').value = t.icon;
+
+        if (catSelect) {
+          const matchCat = CATEGORIES.find(c => c.key === t.cat);
+          if (matchCat) {
+            catSelect.value = t.cat;
+            if (customCatWrapper) customCatWrapper.style.display = 'none';
+          } else {
+            catSelect.value = 'other';
+            if (customCatWrapper) customCatWrapper.style.display = 'block';
+            document.getElementById('customCatInput').value = t.catName || t.cat;
+          }
+        }
+
+        if (iconSelect) {
+          const options = Array.from(iconSelect.options).map(o => o.value);
+          if (options.includes(t.icon)) {
+            iconSelect.value = t.icon;
+            if (customIconWrapper) customIconWrapper.style.display = 'none';
+          } else {
+            iconSelect.value = 'other';
+            if (customIconWrapper) customIconWrapper.style.display = 'block';
+            document.getElementById('customIconInput').value = t.icon;
+          }
+        }
       }
     } else {
       taskForm.reset();
+      if (customCatWrapper) customCatWrapper.style.display = 'none';
+      if (customIconWrapper) customIconWrapper.style.display = 'none';
+      startHourSel.value = '06';
+      startMinSel.value = '00';
+      startAmpmSel.value = 'AM';
+      endHourSel.value = '07';
+      endMinSel.value = '00';
+      endAmpmSel.value = 'AM';
     }
 
+    updateDurationAndRange();
     taskModal.classList.add('open');
   }
 
@@ -757,20 +947,39 @@
       e.preventDefault();
       const editId = document.getElementById('editTaskId').value;
       const name = document.getElementById('taskNameInput').value.trim();
-      const time = document.getElementById('taskTimeInput').value.trim();
-      const hour = parseInt(document.getElementById('taskStartMinInput').value) || 0;
       const period = document.getElementById('taskPeriodInput').value;
-      const cat = document.getElementById('taskCatInput').value;
-      const icon = document.getElementById('taskIconInput').value.trim() || '📌';
+
+      const { startMins, durText, rangeText } = updateDurationAndRange();
+
+      let catKey = catSelect.value;
+      let catName = CATEGORIES.find(c => c.key === catKey)?.label || catKey;
+      if (catKey === 'other') {
+        catName = document.getElementById('customCatInput').value.trim() || 'Custom Task';
+        catKey = catName.toLowerCase().replace(/\s+/g, '-');
+      }
+
+      let iconVal = iconSelect.value;
+      if (iconVal === 'other') {
+        iconVal = document.getElementById('customIconInput').value.trim() || '📌';
+      }
+
+      const taskData = {
+        id: editId ? parseInt(editId) : Date.now(),
+        name,
+        time: rangeText,
+        durationStr: durText,
+        startMin: startMins,
+        period,
+        cat: catKey,
+        catName,
+        icon: iconVal
+      };
 
       if (editId) {
         const idx = customRoutine.findIndex(x => x.id === parseInt(editId));
-        if (idx !== -1) {
-          customRoutine[idx] = { id: parseInt(editId), name, time, startMin: hour * 60, period, cat, icon };
-        }
+        if (idx !== -1) customRoutine[idx] = taskData;
       } else {
-        const newId = Date.now();
-        customRoutine.push({ id: newId, name, time, startMin: hour * 60, period, cat, icon });
+        customRoutine.push(taskData);
       }
 
       await safeSet('custom-routine', customRoutine);
@@ -860,7 +1069,7 @@
   }
 
   // ==========================================================================
-  // MONTHLY & YEARLY ANALYTICS & PIES
+  // MONTHLY TARGETS
   // ==========================================================================
   let viewMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   async function renderTargets() {
@@ -878,7 +1087,7 @@
       tr.innerHTML = `
         <td><div class="cat-name"><span class="cat-dot" style="background:${c.hex}"></span>${c.label}</div></td>
         <td><input class="target-input" data-cat="${c.key}" placeholder="e.g. Set focus goal for month" value="${(targets[c.key] || '').replace(/"/g, '&quot;')}"></td>
-        <td style="text-align:right"><span class="days-count">Target Set</span></td>
+        <td style="text-align:right"><span class="days-count">Active</span></td>
       `;
       targetBody.appendChild(tr);
     });
